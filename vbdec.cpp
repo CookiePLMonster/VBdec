@@ -19,13 +19,13 @@ void RegisterVBInterface()
 	};
 
 	// ASI stream
-	/*const RIB_INTERFACE_ENTRY streamEntries[] = { 
+	const RIB_INTERFACE_ENTRY streamEntries[] = { 
 		REG_FN(ASI_stream_open),
-	};*/
+	};
 
 	providerHandle = RIB_provider_library_handle();
 	RIB_register( providerHandle, "ASI codec", codecEntries );
-	//RIB_register( providerHandle, "ASI stream", streamEntries );
+	RIB_register( providerHandle, "ASI stream", streamEntries );
 }
 
 void UnregisterVBInterface()
@@ -33,6 +33,7 @@ void UnregisterVBInterface()
 	RIB_unregister_all(providerHandle);
 }
 
+// ASI codec
 
 U32 AILCALL FAR PROVIDER_query_attribute(HATTRIB index)
 {
@@ -59,15 +60,7 @@ static int startingCount = 0;
 ASIRESULT AILCALL FAR ASI_startup(void)
 {
 	// TODO: Implement
-	if ( startingCount++ == 0 )
-	{
-		return ASI_NOERR;
-	}
-	else
-	{
-		return ASI_ALREADY_STARTED;
-	}
-
+	return startingCount++ == 0 ? ASI_NOERR : ASI_ALREADY_STARTED;
 }
 
 ASIRESULT AILCALL FAR ASI_shutdown(void)
@@ -88,4 +81,11 @@ C8 FAR* AILCALL FAR ASI_error(void)
 {
 	// TODO: Implement
 	return nullptr;
+}
+
+// ASI stream
+
+HASISTREAM AILCALL FAR ASI_stream_open(U32 user, AILASIFETCHCB fetch_CB, U32 total_size)
+{
+	return 0;
 }
