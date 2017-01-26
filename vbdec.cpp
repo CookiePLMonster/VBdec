@@ -21,6 +21,10 @@ void RegisterVBInterface()
 	// ASI stream
 	const RIB_INTERFACE_ENTRY streamEntries[] = { 
 		REG_FN(ASI_stream_open),
+		REG_FN(ASI_stream_process),
+		REG_FN(ASI_stream_attribute),
+		REG_FN(ASI_stream_set_preference),
+		REG_FN(ASI_stream_seek), 
 	};
 
 	providerHandle = RIB_provider_library_handle();
@@ -87,5 +91,38 @@ C8 FAR* AILCALL FAR ASI_error(void)
 
 HASISTREAM AILCALL FAR ASI_stream_open(U32 user, AILASIFETCHCB fetch_CB, U32 total_size)
 {
+	void* stream = AIL_mem_alloc_lock( 4 );
+	return (HASISTREAM)stream;
+}
+
+S32 AILCALL FAR ASI_stream_process(HASISTREAM  stream, void FAR *buffer, S32 buffer_size)
+{
+
 	return 0;
+}
+
+S32 AILCALL FAR ASI_stream_attribute(HASISTREAM stream, HATTRIB attrib)
+{
+
+	return 0;
+}
+
+S32 AILCALL FAR ASI_stream_set_preference(HASISTREAM stream, HATTRIB preference, void FAR* value)
+{
+
+	return 0;
+}
+
+ASIRESULT AILCALL FAR ASI_stream_seek(HASISTREAM stream, S32 stream_offset)
+{
+
+	return ASI_NOERR;
+}
+
+ASIRESULT AILCALL FAR ASI_stream_close(HASISTREAM stream)
+{
+	void* mem = (void*)stream;
+	AIL_mem_free_lock( mem );
+
+	return ASI_NOERR;
 }
