@@ -9,10 +9,10 @@ void RegisterVBInterface()
 		REG_FN(PROVIDER_query_attribute),
 		REG_AT("Name", PROVIDER_NAME, RIB_STRING),
 		REG_AT("Version", PROVIDER_VERSION, RIB_HEX),
-		REG_AT("Input file types", 0, RIB_STRING),
-		REG_AT("Input wave tag", 1, RIB_DEC),
-		REG_AT("Output file types", 2, RIB_STRING),
-		REG_AT("Maximum frame size", 3, RIB_DEC),
+		REG_AT("Input file types", PROVIDER_InputFileTypes, RIB_STRING),
+		REG_AT("Input wave tag", PROVIDER_InputWaveTag, RIB_DEC),
+		REG_AT("Output file types", PROVIDER_OutputFileTypes, RIB_STRING),
+		REG_AT("Maximum frame size", PROVIDER_MaxFrameSize, RIB_DEC),
 		REG_FN(ASI_startup),
 		REG_FN(ASI_error),
 		REG_FN(ASI_shutdown),
@@ -47,13 +47,13 @@ U32 AILCALL FAR PROVIDER_query_attribute(HATTRIB index)
 		return (U32)"MSS VB Audio Decoder";
 	case PROVIDER_VERSION:
 		return 0x100;
-	case 0: // Input file types
+	case PROVIDER_InputFileTypes:
 		return (U32)"VB audio files\0*.VB";
-	case 1: // Input wave tag
+	case PROVIDER_InputWaveTag:
 		return 85;
-	case 2: // Output file types;
+	case PROVIDER_OutputFileTypes:
 		return (U32)"Raw PCM files\0*.RAW";
-	case 3: // Maximum frame size
+	case PROVIDER_MaxFrameSize:
 		return 0x1000;
 	default:
 		return 0;
@@ -104,13 +104,13 @@ S32 AILCALL FAR ASI_stream_process(HASISTREAM  stream, void FAR *buffer, S32 buf
 S32 AILCALL FAR ASI_stream_attribute(HASISTREAM stream, HATTRIB attrib)
 {
 
-	return 0;
+	return -1;
 }
 
 S32 AILCALL FAR ASI_stream_set_preference(HASISTREAM stream, HATTRIB preference, void FAR* value)
 {
 
-	return 0;
+	return -1;
 }
 
 ASIRESULT AILCALL FAR ASI_stream_seek(HASISTREAM stream, S32 stream_offset)

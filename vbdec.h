@@ -16,3 +16,11 @@ S32 AILCALL FAR ASI_stream_attribute(HASISTREAM stream, HATTRIB attrib);
 S32 AILCALL FAR ASI_stream_set_preference(HASISTREAM stream, HATTRIB preference, void FAR* value);
 ASIRESULT AILCALL FAR ASI_stream_seek(HASISTREAM stream, S32 stream_offset);
 ASIRESULT AILCALL FAR ASI_stream_close(HASISTREAM stream);
+
+enum VBAttrib
+{
+	PROVIDER_InputFileTypes,
+	PROVIDER_InputWaveTag,
+	PROVIDER_OutputFileTypes,
+	PROVIDER_MaxFrameSize,
+};
