@@ -77,7 +77,7 @@ U32 AILCALL FAR PROVIDER_query_attribute(HATTRIB index)
 	case OUT_FTYPES: // Output file types;
 		return (U32)"Raw PCM files\0*.RAW";
 	case FRAME_SIZE: // Maximum frame size
-		return 0x4000;
+		return 2 * 16 * 512;
 	default:
 		return 0;
 	}
@@ -112,12 +112,11 @@ C8 FAR* AILCALL FAR ASI_error(void)
 
 // ASI stream
 
-bool tfile = false;
 void FetchStr( ASISTREAM *STR, int offset = -1 )
 {
 	for (int i = 0; i < 2; i++)
 	{
-		STR->fetch_CB(STR->user, STR->channels[i].block_buffer, 0x2000, offset);
+		STR->fetch_CB(STR->user, STR->channels[i].block_buffer, sizeof(STR->channels[i].block_buffer), offset);
 		if (offset != -1)
 		{
 			STR->channels[i].s_1 = 0.0;
@@ -125,7 +124,7 @@ void FetchStr( ASISTREAM *STR, int offset = -1 )
 		}
 	}
 
-	double f[5][2] = { { 0.0, 0.0 },
+	static const double f[5][2] = { { 0.0, 0.0 },
                 {   60.0 / 64.0,  0.0 },
                 {  115.0 / 64.0, -52.0 / 64.0 },
                 {   98.0 / 64.0, -55.0 / 64.0 },
@@ -171,10 +170,9 @@ void FetchStr( ASISTREAM *STR, int offset = -1 )
 
 HASISTREAM AILCALL FAR ASI_stream_open(U32 user, AILASIFETCHCB fetch_CB, U32 total_size)
 {
-	ASISTREAM FAR *STR = (ASISTREAM FAR *) AIL_mem_alloc_lock((sizeof(ASISTREAM) + 15) & ~15);
-	if (STR == NULL)
+	ASISTREAM FAR *STR = (ASISTREAM FAR *) AIL_mem_alloc_lock( sizeof(ASISTREAM) );
+	if (STR == nullptr)
     {
-		//strcpy(ASI_error_text,"Out of memory");
 		return 0;
 	}
 
@@ -193,9 +191,9 @@ HASISTREAM AILCALL FAR ASI_stream_open(U32 user, AILASIFETCHCB fetch_CB, U32 tot
 	{
 		STR->channels[i].s_1 = 0.0;
 		STR->channels[i].s_2 = 0.0;
-		memset(STR->channels[i].samples, 0, 28 * sizeof(double));
-		memset(STR->channels[i].block_buffer, 0, 0x2000);
-		memset(STR->channels[i].frame, 0, 0x3800);
+		memset(STR->channels[i].samples, 0, sizeof(STR->channels[i].samples));
+		memset(STR->channels[i].block_buffer, 0, sizeof(STR->channels[i].block_buffer));
+		memset(STR->channels[i].frame, 0, sizeof(STR->channels[i].frame));
 	}
 
 	return (HASISTREAM)STR;
@@ -212,8 +210,6 @@ ASIRESULT AILCALL ASI_stream_close(HASISTREAM stream)
 
 S32 AILCALL FAR ASI_stream_process(HASISTREAM stream, void FAR *buffer, S32 buffer_size)
 {
-	S32 tbuffer_size = buffer_size;
-
 	ASISTREAM *STR = (ASISTREAM*)stream;
 
 	if (GET_BLOCK(STR->offset) != STR->cur_block)
@@ -224,26 +220,32 @@ S32 AILCALL FAR ASI_stream_process(HASISTREAM stream, void FAR *buffer, S32 buff
 
 
 	S16 *dest = (S16 *)buffer;
+	S32 bytes_decoded = 0;
 
-	for (int i = 0; i < buffer_size / 2; i++)
+	for (int i = 0; i < buffer_size / 4; i++)
 	{
+		if ( STR->cursor + i >= _countof(STR->channels[0].frame) )
+			break;
+
 		for (int c = 0; c < 2; c++)
+		{
 			dest[i * 2 + c] = STR->channels[c].frame[STR->cursor + i];
+			bytes_decoded += sizeof(S16);
+		}
 	}
 	STR->cursor += buffer_size / 4;
-	if (STR->cursor >= 0x3800)
+	if (STR->cursor >= _countof(STR->channels[0].frame))
 	{
 		STR->cursor = 0;
-		STR->offset += 0x2000;
+		STR->offset += _countof(STR->channels[0].block_buffer);
 	}
 
-	return buffer_size;
+	return bytes_decoded;
 }
 
 bool sfile = false;
 ASIRESULT AILCALL ASI_stream_seek (HASISTREAM stream, S32 stream_offset)
 {
-
 	ASISTREAM *STR = (ASISTREAM*)stream;
 	if (stream_offset > STR->size) return ASI_INVALID_PARAM;
 
@@ -269,8 +271,8 @@ S32 AILCALL FAR ASI_stream_attribute (HASISTREAM stream, HATTRIB attrib)
 	switch (attrib)
 	{
 	case INPUT_BIT_RATE: return 0x7D00000;
-	case INPUT_SAMPLE_RATE: return 1000;
-	case INPUT_BITS: return 128;
+	case INPUT_SAMPLE_RATE: return 32000;
+	case INPUT_BITS: return 4;
 	case INPUT_CHANNELS: return 2;
 	case OUTPUT_BIT_RATE: return 32000 * 16 * 2;
 	case OUTPUT_SAMPLE_RATE: return 32000;
@@ -279,10 +281,10 @@ S32 AILCALL FAR ASI_stream_attribute (HASISTREAM stream, HATTRIB attrib)
 	case POSITION: return STR->offset;
 	case PERCENT_DONE:
 		{
-			float percent = ((float)(100.0 * STR->offset) / (STR->size / 0x4000));
+			float percent = ((float)(100.0 * STR->offset) / (STR->size / (2 * 16 * 512)));
 			return *(S32*)&percent;
 		}
-	case MIN_INPUT_BLOCK_SIZE: return 0x4000;
+	case MIN_INPUT_BLOCK_SIZE: return 2 * 16 * 512;
 	}
 	return -1;
 }
