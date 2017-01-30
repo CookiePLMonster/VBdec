@@ -1,7 +1,6 @@
 #pragma once
 
 #include "mss/mss.h"
-#include <iostream>
 
 enum PROPERTY
 {
@@ -54,20 +53,34 @@ struct ASISTREAM
 
 	U32 offset;
 
-	U32 cursor;
+	S32 cursor;
 	U32 blocks;
 	U32 cur_block;
 
-	//U32 block_buffer[2][0x1000];
+	U32 num_of_channels;
+
+	bool loop;
+
+	struct // Big endian
+	{
+		char VAG[3];
+		char field_3;       // can be p or i
+		int  version;       // doesn't seem to matter at all
+		int  field_8;       // always 0?
+		int  size;          // size minus 0x30
+		int  sample_rate;
+		int  stereo;
+		int  field_18[2];   // always 0?
+		char filename[16];
+		char padding[16];
+	} VAGheader;
+
 	struct
 	{
 		double s_1, s_2;
 		double samples[28];
-		U8 block_buffer[0x2000];
-		S16 frame[0x3800];
+		S16 decoded_samples[28];
 	} channels[2];
-
-	//FILE* debug_file;
 };
 
 void RegisterVBInterface();

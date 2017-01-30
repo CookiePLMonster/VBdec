@@ -1,7 +1,7 @@
 #include "vbdec.h"
 
 #define GET_BLOCK(offset) ( offset >> 13 )
-
+#define BE_TO_LE(i) ( ((i & 0xFF) << 24) | ((i & 0xFF00) << 8) | ((i & 0xFF0000) >> 8) | ((i & 0xFF000000) >> 24)  )
 
 static HPROVIDER providerHandle;
 void RegisterVBInterface()
@@ -67,11 +67,11 @@ U32 AILCALL FAR PROVIDER_query_attribute(HATTRIB index)
 	switch ( index )
 	{
 	case PROVIDER_NAME:
-		return (U32)"MSS VB Audio Decoder";
+		return (U32)"MSS VAG Audio Decoder";
 	case PROVIDER_VERSION:
 		return 0x100;
 	case IN_FTYPES: // Input file types
-		return (U32)"VB audio files\0*.VB";
+		return (U32)"VAG audio files\0*.VAG";
 	//case IN_WTAG: // Input wave tag
 	//	return 85;
 	case OUT_FTYPES: // Output file types;
@@ -112,11 +112,27 @@ C8 FAR* AILCALL FAR ASI_error(void)
 
 // ASI stream
 
-void FetchStr( ASISTREAM *STR, int offset = -1 )
+bool FetchStr( ASISTREAM *STR, int offset = -1 )
 {
-	for (int i = 0; i < 2; i++)
+	U8 in_buf[0x20];
+
+	if ( STR->loop )
 	{
-		STR->fetch_CB(STR->user, STR->channels[i].block_buffer, sizeof(STR->channels[i].block_buffer), offset);
+		offset = sizeof(STR->VAGheader);
+		STR->loop = false;
+	}
+	
+	auto bytes_read = STR->fetch_CB(STR->user, in_buf, STR->num_of_channels * 0x10, offset);
+	if (bytes_read < STR->num_of_channels * 0x10) return false;
+
+	if (*(U32*)&in_buf[0] == 'pGAV') // hooray loop
+	{
+		bytes_read = STR->fetch_CB(STR->user, in_buf, STR->num_of_channels * 0x10, sizeof(STR->VAGheader));
+		if (bytes_read < STR->num_of_channels * 0x10) return false;
+	}
+		
+	for (int i = 0; i < STR->num_of_channels; i++)
+	{
 		if (offset != -1)
 		{
 			STR->channels[i].s_1 = 0.0;
@@ -130,43 +146,42 @@ void FetchStr( ASISTREAM *STR, int offset = -1 )
                 {   98.0 / 64.0, -55.0 / 64.0 },
                 {  122.0 / 64.0, -60.0 / 64.0 } };
 
-	U8 *bufs[] = { STR->channels[0].block_buffer, STR->channels[1].block_buffer };
-	S16 *dest[] = { STR->channels[0].frame, STR->channels[1].frame };
-	for (int c = 0; c < 2; c++)
+	U8 *bufs[] = { in_buf, &in_buf[0x10] };
+	S16 *dest[] = { STR->channels[0].decoded_samples, STR->channels[1].decoded_samples };
+	for (int c = 0; c < STR->num_of_channels; c++)
 	{
-		for ( int a = 0; a < 0x7000; a+=(28 * 2))
+		int predict_nr = *(bufs[c]++);
+		int shift_factor = predict_nr & 0xf;
+		predict_nr >>= 4;
+		int flags = *(bufs[c]++);
+		if ( flags == 7 ) return false;
+		for ( int i = 0; i < 28; i += 2 )
 		{
-			//if (buffer_size <= 0) break;
-			int predict_nr = *(bufs[c]++);
-			int shift_factor = predict_nr & 0xf;
-			predict_nr >>= 4;
-			int flags = *(bufs[c]++);
-			if ( flags == 7 ) break;
-			for ( int i = 0; i < 28; i += 2 )
-			{
-				int d = *(bufs[c]++);
-				int s = ( d & 0xf ) << 12;
-				if ( s & 0x8000 )
-					s |= 0xffff0000;
-				STR->channels[c].samples[i] = (double) ( s >> shift_factor  );
-				s = ( d & 0xf0 ) << 8;
-				if ( s & 0x8000 )
-					s |= 0xffff0000;
-				STR->channels[c].samples[i+1] = (double) ( s >> shift_factor  );
+			int d = *(bufs[c]++);
+			int s = ( d & 0xf ) << 12;
+			if ( s & 0x8000 )
+				s |= 0xffff0000;
+			STR->channels[c].samples[i] = (double) ( s >> shift_factor  );
+			s = ( d & 0xf0 ) << 8;
+			if ( s & 0x8000 )
+				s |= 0xffff0000;
+			STR->channels[c].samples[i+1] = (double) ( s >> shift_factor  );
 
-			}
-			for ( int i = 0; i < 28; i++ )
-			{
-				STR->channels[c].samples[i] = STR->channels[c].samples[i] + STR->channels[c].s_1 * f[predict_nr][0] + STR->channels[c].s_2 * f[predict_nr][1];
-				STR->channels[c].s_2 = STR->channels[c].s_1;
-				STR->channels[c].s_1 = STR->channels[c].samples[i];
-				int d = (int) ( STR->channels[c].samples[i] + 0.5 );
-				*(dest[c]++) = (d & 0xffff);
-			}
-			if ( flags == 1 ) break; 
 		}
+		for ( int i = 0; i < 28; i++ )
+		{
+			STR->channels[c].samples[i] = STR->channels[c].samples[i] + STR->channels[c].s_1 * f[predict_nr][0] + STR->channels[c].s_2 * f[predict_nr][1];
+			STR->channels[c].s_2 = STR->channels[c].s_1;
+			STR->channels[c].s_1 = STR->channels[c].samples[i];
+			int d = (int) ( STR->channels[c].samples[i] + 0.5 );
+			if ( d & 0x8000 ) d |= 0xffff0000;
+			*(dest[c]++) = (d & 0xffff);
+		}
+		if ( flags == 1 ) break; 
 	}
+	return true;
 }
+
 
 HASISTREAM AILCALL FAR ASI_stream_open(U32 user, AILASIFETCHCB fetch_CB, U32 total_size)
 {
@@ -183,19 +198,23 @@ HASISTREAM AILCALL FAR ASI_stream_open(U32 user, AILASIFETCHCB fetch_CB, U32 tot
 	STR->size = total_size;
 
 	STR->cursor = 0;
-	STR->offset = 0;
-	STR->cur_block = -1;
-	STR->blocks = total_size / 0x4000;
+	STR->loop = false;
 
-	for (int i = 0; i < 2; i++)
+	fetch_CB(user, &STR->VAGheader, sizeof(STR->VAGheader), -1);
+	STR->VAGheader.version = BE_TO_LE(STR->VAGheader.version);
+	STR->VAGheader.sample_rate = BE_TO_LE(STR->VAGheader.sample_rate);
+	STR->VAGheader.size = BE_TO_LE(STR->VAGheader.size);
+	STR->num_of_channels = (STR->VAGheader.stereo != 0) ? 2 : 1;
+
+	for (int i = 0; i < STR->num_of_channels; i++)
 	{
 		STR->channels[i].s_1 = 0.0;
 		STR->channels[i].s_2 = 0.0;
 		memset(STR->channels[i].samples, 0, sizeof(STR->channels[i].samples));
-		memset(STR->channels[i].block_buffer, 0, sizeof(STR->channels[i].block_buffer));
-		memset(STR->channels[i].frame, 0, sizeof(STR->channels[i].frame));
+		memset(STR->channels[i].decoded_samples, 0, sizeof(STR->channels[i].decoded_samples));
 	}
 
+	FetchStr(STR, sizeof(STR->VAGheader));
 	return (HASISTREAM)STR;
 }
 
@@ -211,58 +230,45 @@ ASIRESULT AILCALL ASI_stream_close(HASISTREAM stream)
 S32 AILCALL FAR ASI_stream_process(HASISTREAM stream, void FAR *buffer, S32 buffer_size)
 {
 	ASISTREAM *STR = (ASISTREAM*)stream;
-
-	if (GET_BLOCK(STR->offset) != STR->cur_block)
-	{
-		FetchStr(STR);
-		STR->cur_block = GET_BLOCK(STR->offset);
-	}
-
-
+	
 	S16 *dest = (S16 *)buffer;
 	S32 bytes_decoded = 0;
-
-	for (int i = 0; i < buffer_size / 4; i++)
+	
+	for (int i = 0; i < buffer_size / (2 * STR->num_of_channels); i++)
 	{
-		if ( STR->cursor + i >= _countof(STR->channels[0].frame) )
-			break;
-
-		for (int c = 0; c < 2; c++)
+		for (int c = 0; c < STR->num_of_channels; c++)
 		{
-			dest[i * 2 + c] = STR->channels[c].frame[STR->cursor + i];
+			dest[i * STR->num_of_channels + c] = STR->channels[c].decoded_samples[STR->cursor];
 			bytes_decoded += sizeof(S16);
 		}
+		STR->cursor++;
+		if (STR->cursor >= 28)
+		{
+			STR->cursor = 0;
+			if (!FetchStr(STR))
+				break;
+		}
 	}
-	STR->cursor += buffer_size / 4;
-	if (STR->cursor >= _countof(STR->channels[0].frame))
-	{
-		STR->cursor = 0;
-		STR->offset += _countof(STR->channels[0].block_buffer);
-	}
-
 	return bytes_decoded;
 }
 
-bool sfile = false;
 ASIRESULT AILCALL ASI_stream_seek (HASISTREAM stream, S32 stream_offset)
 {
 	ASISTREAM *STR = (ASISTREAM*)stream;
 	if (stream_offset > STR->size) return ASI_INVALID_PARAM;
 
-	if (stream_offset != -2) // loop
-		stream_offset = 0;
-
-	stream_offset &= 0xFFFFE000;
-	STR->offset = stream_offset;
-
-	if (GET_BLOCK(STR->offset) != STR->cur_block)
+	if (stream_offset == -2) // loop
 	{
-		FetchStr(STR, STR->offset);
-		STR->cur_block = GET_BLOCK(STR->offset);
+		stream_offset = sizeof(STR->VAGheader);
+		STR->loop = true;
 	}
-	STR->cursor = 0;
+	else
+	{
+		STR->cursor = 0;
+		FetchStr(STR, stream_offset);
+	}
 
-   return ASI_NOERR;
+	return ASI_NOERR;
 }
 
 S32 AILCALL FAR ASI_stream_attribute (HASISTREAM stream, HATTRIB attrib)
@@ -270,21 +276,21 @@ S32 AILCALL FAR ASI_stream_attribute (HASISTREAM stream, HATTRIB attrib)
 	ASISTREAM *STR = (ASISTREAM*)stream;
 	switch (attrib)
 	{
-	case INPUT_BIT_RATE: return 0x7D00000;
-	case INPUT_SAMPLE_RATE: return 32000;
+	case INPUT_BIT_RATE: return 0x10 * 1000 * STR->num_of_channels * 8; // align 0x10 bytes * channels
+	case INPUT_SAMPLE_RATE: return STR->VAGheader.sample_rate;
 	case INPUT_BITS: return 4;
-	case INPUT_CHANNELS: return 2;
-	case OUTPUT_BIT_RATE: return 32000 * 16 * 2;
-	case OUTPUT_SAMPLE_RATE: return 32000;
+	case INPUT_CHANNELS: return STR->num_of_channels;
+	case OUTPUT_BIT_RATE: return STR->VAGheader.sample_rate * 16 * STR->num_of_channels;
+	case OUTPUT_SAMPLE_RATE: return STR->VAGheader.sample_rate;
 	case OUTPUT_BITS: return 16;
-	case OUTPUT_CHANNELS: return 2;
+	case OUTPUT_CHANNELS: return STR->num_of_channels;
 	case POSITION: return STR->offset;
 	case PERCENT_DONE:
 		{
-			float percent = ((float)(100.0 * STR->offset) / (STR->size / (2 * 16 * 512)));
+			float percent = ((float)(100.0 * STR->offset) / (STR->size / (STR->num_of_channels * 16 * 512)));
 			return *(S32*)&percent;
 		}
-	case MIN_INPUT_BLOCK_SIZE: return 2 * 16 * 512;
+	case MIN_INPUT_BLOCK_SIZE: return STR->num_of_channels * 16 * 512;
 	}
 	return -1;
 }
