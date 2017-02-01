@@ -26,10 +26,13 @@
 
 #ifndef MSS_VERSION
 
-#define MSS_VERSION      "6.0f"
-#define MSS_VERSION_DATE "24-Apr-00"
+#define MSS_VERSION      "6.1a"
+#define MSS_MAJOR_VERSION 6
+#define MSS_MINOR_VERSION 1
+#define MSS_SUB_VERSION   1
+#define MSS_VERSION_DATE "06-Mar-01"
 
-#define MSS_COPYRIGHT "Copyright (C) 1991-2000, RAD Game Tools, Inc."
+#define MSS_COPYRIGHT "Copyright (C) 1991-2001, RAD Game Tools, Inc."
 
 #endif
 
@@ -42,6 +45,13 @@
 // IS_WIN16 for Windows
 // IS_32 for 32-bit DOS or Win32s
 // IS_16 for 16-bit Windows
+// IS_LE for little endian (PCs)
+// IS_BE for big endian (Macs)
+// IS_X86 for Intel
+// IS_MAC for Mac
+// IS_PPC for PPC Mac
+// IS_68K for 68K Mac
+
 
 #ifdef IS_DOS
 #undef IS_DOS
@@ -67,54 +77,111 @@
 #undef IS_16
 #endif
 
+#ifdef IS_LE
+#undef IS_LE
+#endif
+
+#ifdef IS_BE
+#undef IS_BE
+#endif
+
+#ifdef IS_X86
+#undef IS_X86
+#endif
+
+#ifdef IS_MAC
+#undef IS_MAC
+#endif
+
+#ifdef IS_PPC
+#undef IS_PPC
+#endif
+
+#ifdef IS_68K
+#undef IS_68K
+#endif
+
 #ifdef __DOS__
   #define IS_DOS
   #define IS_32
+  #define IS_LE
+  #define IS_X86
 #else
   #ifdef _WIN32
     #define IS_WINDOWS
     #define IS_WIN32
     #define IS_32
+    #define IS_LE
+    #define IS_X86
   #else
     #ifdef WIN32
       #define IS_WINDOWS
       #define IS_WIN32
       #define IS_32
+      #define IS_LE
+      #define IS_X86
     #else
       #ifdef __NT__
         #define IS_WINDOWS
         #define IS_WIN32
         #define IS_32
+        #define IS_LE
+        #define IS_X86
       #else
         #ifdef __WIN32__
           #define IS_WINDOWS
           #define IS_WIN32
           #define IS_32
+          #define IS_LE
+          #define IS_X86
         #else
           #ifdef _WINDOWS
             #define IS_WINDOWS
             #define IS_WIN16
             #define IS_16
+            #define IS_LE
+            #define IS_X86
           #else
             #ifdef _WINDLL
               #define IS_WINDOWS
               #define IS_WIN16
               #define IS_16
+              #define IS_LE
+              #define IS_X86
             #else
               #ifdef WINDOWS
                 #define IS_WINDOWS
                 #define IS_WIN16
                 #define IS_16
+                #define IS_LE
+                #define IS_X86
               #else
                 #ifdef __WINDOWS__
                   #define IS_WINDOWS
                   #define IS_WIN16
                   #define IS_16
+                  #define IS_LE
+                  #define IS_X86
                 #else
                   #ifdef _Windows
                     #define IS_WINDOWS
                     #define IS_WIN16
                     #define IS_16
+                    #define IS_LE
+                    #define IS_X86
+                  #else
+                    #if defined(macintosh) || defined(__powerc) || defined(powerc) || defined(__POWERPC__) || defined(__MC68K__)
+                      #define IS_MAC
+                      #define IS_32
+                      #define IS_BE
+                      #if defined(__powerc) || defined(powerc) || defined(__POWERPC__)
+                        #define IS_PPC
+                      #else
+                        #if defined(__MC68K__)
+                          #define IS_68K
+                        #endif
+                      #endif
+                    #endif
                   #endif
                 #endif
               #endif
@@ -126,12 +193,12 @@
   #endif
 #endif
 
-#if (!defined(IS_DOS) && !defined(IS_WINDOWS))
-  #error MSS.H did not detect your platform.  Define __DOS__, _WINDOWS, or WIN32.
+#if (!defined(IS_LE) && !defined(IS_BE))
+  #error MSS.H did not detect your platform.  Define __DOS__, _WINDOWS, WIN32, or macintosh.
 #endif
 
 
-#ifdef _PUSHPOP_SUPPORTED
+#if defined(_PUSHPOP_SUPPORTED) || PRAGMA_STRUCT_PACKPUSH
   #pragma pack(push,1)
 #else
   #pragma pack(1)
@@ -155,8 +222,8 @@ extern "C" {
 #define FOURCC U32
 
 #define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
-		((U32)(U8)(ch0) | ((U32)(U8)(ch1) << 8) |   \
-		((U32)(U8)(ch2) << 16) | ((U32)(U8)(ch3) << 24 ))
+              ((U32)(U8)(ch0) | ((U32)(U8)(ch1) << 8) |   \
+              ((U32)(U8)(ch2) << 16) | ((U32)(U8)(ch3) << 24 ))
 
 #define mmioFOURCC(w,x,y,z) MAKEFOURCC(w,x,y,z)
 
@@ -166,7 +233,13 @@ extern "C" {
 
 #define MSS_REDIST_DIR_NAME "DOS"
 
+#define MSS_DIR_SEP "\\"
+#define MSS_DIR_UP ".." MSS_DIR_SEP
+#define MSS_DIR_UP_TWO MSS_DIR_UP MSS_DIR_UP
+
 #else
+
+#ifdef IS_WINDOWS
 
 #define AILLIBCALLBACK WINAPI
 
@@ -204,8 +277,9 @@ extern "C" {
     #define DXDEF __declspec(dllexport)
   #else
 
-    #ifdef __BORLANDC__
+    #if 1 /*def __BORLANDC__*/
       #define DXDEC extern
+	  #define DXDEF
     #else
       #define DXDEC __declspec(dllimport)
     #endif
@@ -215,6 +289,10 @@ extern "C" {
   #define MSSDLLNAME "MSS32.DLL"
   #define MSS_REDIST_DIR_NAME "WIN32"
 
+  #define MSS_DIR_SEP "\\"
+  #define MSS_DIR_UP ".." MSS_DIR_SEP
+  #define MSS_DIR_UP_TWO MSS_DIR_UP MSS_DIR_UP
+ 
 #else
 
   #define AILEXPORT __export WINAPI
@@ -224,6 +302,10 @@ extern "C" {
 
   #define MSSDLLNAME "MSS16.DLL"
   #define MSS_REDIST_DIR_NAME "WIN16"
+  
+  #define MSS_DIR_SEP "\\"
+  #define MSS_DIR_UP ".." MSS_DIR_SEP
+  #define MSS_DIR_UP_TWO MSS_DIR_UP MSS_DIR_UP
 
 #endif
 
@@ -232,6 +314,55 @@ extern "C" {
 
 typedef LPVOID AILLPDIRECTSOUND;
 typedef LPVOID AILLPDIRECTSOUNDBUFFER;
+
+#else
+
+#ifdef IS_MAC
+
+#include <string.h>
+#include <Files.h>
+#include <Sound.h>
+#include <Resources.h>		// needed for GetResource, ReleaseResource
+
+#define FAR
+
+#define AILLIBCALLBACK //pascal
+#define AILCALL        //pascal
+#define AILEXPORT      //pascal
+#define AILCALLBACK    //pascal
+
+#ifdef BUILD_MSS
+  #define DXDEC __declspec(export)
+  #define DXDEF
+#else
+  #define DXDEC extern
+  #define DXDEF
+#endif
+
+#define MSS_REDIST_DIR_NAME "MAC"
+
+#define MSS_DIR_SEP ":"
+#define MSS_DIR_UP ":" MSS_DIR_SEP
+#define MSS_DIR_UP_TWO MSS_DIR_UP MSS_DIR_SEP
+
+#define HIWORD(ptr) (((U32)ptr)>>16)
+#define LOWORD(ptr) ((U16)((U32)ptr))
+
+#define FOURCC U32
+
+#ifndef MAKEFOURCC
+#define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
+        (((U32)(U8)(ch0) << 24) | ((U32)(U8)(ch1) << 16) |   \
+              ((U32)(U8)(ch2) <<  8) | ((U32)(U8)(ch3)      ))
+#endif
+
+#define mmioFOURCC(w,x,y,z) MAKEFOURCC(w,x,y,z)
+
+#define MSS_MAIN_DEF
+
+#endif
+
+#endif
 
 #endif
 
@@ -250,6 +381,9 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 #define NUM_CHANS                16       // # of possible MIDI channels
 #define MAX_W_VOICES             16       // Max virtual wave synth voice cnt
 #define MAX_W_ENTRIES            512      // 512 wave library entries max.
+#ifdef IS_MAC
+#define MAX_INSTR                150      // Max # of instruments 128 + 32
+#endif
 
 #define MIN_CHAN                 ( 1-1)   // Min channel recognized (0-based)
 #define MAX_CHAN                 (16-1)   // Max channel recognized
@@ -262,7 +396,7 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
                                           // to determine sample format
 #define DIG_F_16BITS_MASK        1
 #define DIG_F_STEREO_MASK        2
-#define DIG_F_ADPCM_MASK	      4
+#define DIG_F_ADPCM_MASK         4
 
 #define DIG_F_MONO_8             0        // PCM data formats
 #define DIG_F_MONO_16            (DIG_F_16BITS_MASK)
@@ -474,6 +608,8 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 
 #else
 
+#ifdef IS_WINDOWS
+
 //
 // AIL_set_direct_buffer_control() command values
 //
@@ -481,6 +617,8 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 #define AILDS_RELINQUISH  0         // App returns control of secondary buffer
 #define AILDS_SEIZE       1         // App takes control of secondary buffer
 #define AILDS_SEIZE_LOOP  2         // App wishes to loop the secondary buffer
+
+#endif
 
 #endif
 
@@ -567,7 +705,7 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 //
 
 #define DIG_RESAMPLING_TOLERANCE   0
-#define DEFAULT_DRT                655    // Resampling triggered at +/- 1%
+#define DEFAULT_DRT                131    // Resampling triggered at +/- 0.2%
 
 #define DIG_MIXER_CHANNELS         1
 #define DEFAULT_DMC                64     // 64 allocatable SAMPLE structures
@@ -593,14 +731,31 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 #define MDI_DEFAULT_BEND_RANGE     8
 #define DEFAULT_MDBR               2      // Default pitch-bend range = 2
 
+#ifdef IS_X86
+
 #define MDI_DOUBLE_NOTE_OFF        9
 #define DEFAULT_MDNO               NO     // For stuck notes on SB daughterboards
+
+#endif
 
 #define DIG_ENABLE_RESAMPLE_FILTER 31     // Enable resampling filter by
 #define DEFAULT_DERF               YES    // default
 
 #define DIG_DECODE_BUFFER_SIZE     32     // 2K decode buffer size by default
 #define DEFAULT_DDBS               2048
+
+#if defined(IS_WINDOWS) || defined(IS_MAC)
+
+#define MDI_SYSEX_BUFFER_SIZE      10
+#define DEFAULT_MSBS               1536   // Default sysex buffer = 1536 bytes
+
+#define DIG_OUTPUT_BUFFER_SIZE     11
+#define DEFAULT_DOBS               49152  // 48K output buffer size
+
+#define AIL_MM_PERIOD              12
+#define DEFAULT_AMP                5      // Default MM timer period = 5 msec.
+
+#endif
 
 #ifdef IS_WINDOWS
 
@@ -622,20 +777,14 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 #define DIG_DS_CREATION_HANDLER    38
 #define DEFAULT_DDCH               NULL   // Use DirectSoundCreate() by default
 
-#define MDI_SYSEX_BUFFER_SIZE      10
-#define DEFAULT_MSBS               1536   // Default sysex buffer = 1536 bytes
-
-#define DIG_OUTPUT_BUFFER_SIZE     11
-#define DEFAULT_DOBS               49152  // 48K output buffer size
-
-#define AIL_MM_PERIOD              12
-#define DEFAULT_AMP                5      // Default MM timer period = 5 msec.
-
 #define AIL_TIMERS                 13
 #define DEFAULT_AT                 16     // 16 allocatable HTIMER handles
 
-#define DIG_MIN_CHAIN_ELEMENT_SIZE 14
-#define DEFAULT_MCES               4096   // 4096 bytes/waveOut buffer
+#define DIG_MAX_CHAIN_ELEMENT_SIZE 14
+#define DEFAULT_MCES               8192   // max of 8192 bytes/waveOut buffer
+
+#define DIG_MIN_CHAIN_ELEMENT_TIME 45
+#define DEFAULT_MCET               100    // 100 milliseconds buffers
 
 #define DIG_USE_WAVEOUT            15
 #define DEFAULT_DUW                NO     // Use DirectSound by default
@@ -656,6 +805,8 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 #define DEFAULT_AMPR               YES    // Lock each call into Miles with a mutex
 
 #else
+
+#ifdef IS_DOS
 
 #define DIG_SERVICE_RATE          10
 #define DEFAULT_DSR               200     // DMA buffer-polling rate = 200 Hz
@@ -689,6 +840,8 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 
 #endif
 
+#endif
+
 // ----------------------------------
 // DLS Preference names and default values
 // Unless otherwise specified, values must be established
@@ -713,8 +866,12 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 #define DLS_ENABLE_FILTERING       25   // Filtering = on by default
 #define DEFAULT_DEF                YES  // (may be changed at any time)
 
+#ifdef IS_X86
+
 #define AIL_ENABLE_MMX_SUPPORT     27   // Enable MMX support if present
 #define DEFAULT_AEMS               YES  // (may be changed at any time)
+
+#endif
 
 #define DLS_GM_PASSTHROUGH         28   // Pass unrecognized traffic on to
 #define DEFAULT_DGP                YES  // default GM driver layer
@@ -722,23 +879,6 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 
 #define DLS_ADPCM_TO_ASI_THRESHOLD 39   // Size in samples to switch to ASI
 #define DEFAULT_DATAT              32768
-
-#ifdef OLD_DLS_REVERB_PREFERENCES
-
-// these preferences are obsolete - move to the new DLS reverb function.
-//   these defines now control nothing and will disappear completely
-//   in MSS 6.0
-
-#define DLS_ENABLE_GLOBAL_REVERB   26   // Global reverb disabled by default
-#define DEFAULT_DEGR               NO
-
-#define DLS_GLOBAL_REVERB_LEVEL    29   // Reverb level 0-127
-#define DEFAULT_GRL                20   // (may be changed at any time)
-
-#define DLS_GLOBAL_REVERB_TIME     30   // Reverb time in stream buffers
-#define DEFAULT_GRT                1
-
-#endif
 
 //
 // Add'l platform-independent prefs
@@ -750,22 +890,27 @@ typedef LPVOID AILLPDIRECTSOUNDBUFFER;
 #define DIG_INPUT_LATENCY          41   // Use >= 250-millisecond input buffers if
 #define DEFAULT_DIL                250  // explicit size request cannot be satisfied
 
+#ifdef IS_WINDOWS
+
 #define DIG_USE_WAVEIN             43
 #define DEFAULT_DUWI               YES  // Use waveIn for input by default
 
-#define N_PREFS 45                      // # of preference types
+#endif
+
+#define N_PREFS 46                      // # of preference types
 
 typedef struct _AILSOUNDINFO {
   S32 format;
-  void FAR* data_ptr;
+  void const FAR* data_ptr;
   U32 data_len;
   U32 rate;
   S32 bits;
   S32 channels;
   U32 samples;
   U32 block_size;
-  void FAR* initial_ptr;
+  void const FAR* initial_ptr;
 } AILSOUNDINFO;
+
 
 // for multi-processor machines
 
@@ -951,34 +1096,34 @@ typedef U32 (AILCALL FAR *PROVIDER_QUERY_ATTRIBUTE) (HATTRIB index);
 DXDEC  HPROVIDER  AILCALL RIB_alloc_provider_handle   (U32            module);
 DXDEC  void       AILCALL RIB_free_provider_handle    (HPROVIDER      provider);
 
-DXDEC  HPROVIDER  AILCALL RIB_load_provider_library   (C8 FAR        *filename);
+DXDEC  HPROVIDER  AILCALL RIB_load_provider_library   (C8 const FAR *filename);
 DXDEC  void       AILCALL RIB_free_provider_library   (HPROVIDER      provider);
 
 DXDEC  HPROVIDER  AILCALL RIB_provider_library_handle (void);
 
 DXDEC  RIBRESULT  AILCALL RIB_register_interface      (HPROVIDER                      provider,
-                                                       C8 FAR                        *interface_name,
+                                                       C8 const FAR                   *interface_name,
                                                        S32                            entry_count,
-                                                       const RIB_INTERFACE_ENTRY FAR *rlist);
+                                                       RIB_INTERFACE_ENTRY const FAR *rlist);
 
 DXDEC  RIBRESULT  AILCALL RIB_unregister_interface    (HPROVIDER                      provider,
-                                                       C8 FAR                        *interface_name,
+                                                       C8 const FAR                  *interface_name,
                                                        S32                            entry_count,
-                                                       const RIB_INTERFACE_ENTRY FAR *rlist);
+                                                       RIB_INTERFACE_ENTRY const FAR *rlist);
 
 DXDEC  RIBRESULT  AILCALL RIB_request_interface       (HPROVIDER                provider,
-                                                       C8 FAR                  *interface_name,
+                                                       C8 const FAR            *interface_name,
                                                        S32                      entry_count,
                                                        RIB_INTERFACE_ENTRY FAR *rlist);
 
 DXDEC  RIBRESULT  AILCALL RIB_request_interface_entry (HPROVIDER                provider,
-                                                       C8 FAR                  *interface_name,
+                                                       C8 const FAR            *interface_name,
                                                        RIB_ENTRY_TYPE           entry_type,
-                                                       C8 FAR                  *entry_name,
+                                                       C8 const FAR            *entry_name,
                                                        U32 FAR                 *token);
 
 DXDEC  S32        AILCALL RIB_enumerate_interface     (HPROVIDER                provider,
-                                                       C8 FAR                  *interface_name,
+                                                       C8 FAR             *interface_name,
                                                        RIB_ENTRY_TYPE           type,
                                                        HINTENUM FAR            *next,
                                                        RIB_INTERFACE_ENTRY FAR *dest);
@@ -990,16 +1135,28 @@ DXDEC  S32        AILCALL RIB_enumerate_providers     (C8 FAR                  *
 DXDEC  C8 FAR *   AILCALL RIB_type_string             (U32                      data,
                                                        RIB_DATA_SUBTYPE         subtype);
 
-DXDEC  HPROVIDER  AILCALL RIB_find_file_provider      (C8 FAR                  *interface_name,
-                                                       C8 FAR                  *attribute_name,
-                                                       C8 FAR                  *file_suffix);
+DXDEC  HPROVIDER  AILCALL RIB_find_file_provider      (C8 const FAR            *interface_name,
+                                                       C8 const FAR            *attribute_name,
+                                                       C8 const FAR            *file_suffix);
 
-DXDEC  HPROVIDER  AILCALL RIB_find_provider           (C8 FAR                  *interface_name,
-                                                       C8 FAR                  *attribute_name,
-                                                       C8 FAR                  *attribute_value);
+DXDEC  HPROVIDER  AILCALL RIB_find_provider           (C8 const FAR            *interface_name,
+                                                       C8 const FAR            *attribute_name,
+                                                       C8 const FAR            *attribute_value);
+
+DXDEC  HPROVIDER  AILCALL RIB_find_files_provider     (C8 const FAR *interface_name,
+                                                       C8 const FAR *attribute_name_1,
+                                                       C8 const FAR *file_suffix_1,
+                                                       C8 const FAR *attribute_name_2,
+                                                       C8 const FAR *file_suffix_2);
+
+DXDEC  HPROVIDER  AILCALL RIB_find_file_dec_provider  (C8 const FAR *interface_name,
+                                                       C8 const FAR *attribute_name_1,
+                                                       U32 attribute_value_1,
+                                                       C8 const FAR *attribute_name_2,
+                                                       C8 const FAR *file_suffix_2);
 
 DXDEC  S32        AILCALL RIB_load_application_providers
-                                                      (C8 FAR *filespec);
+                                                      (C8 const FAR  *filespec);
 
 DXDEC  void       AILCALL RIB_set_provider_user_data  (HPROVIDER provider,
                                                        U32       index,
@@ -1016,7 +1173,7 @@ DXDEC  void       AILCALL RIB_set_provider_system_data
 DXDEC  S32        AILCALL RIB_provider_system_data    (HPROVIDER provider,
                                                        U32       index);
 
-DXDEC  C8 FAR *   AILCALL RIB_error                   (void);
+DXDEC  C8 FAR *  AILCALL  RIB_error                   (void);
 
 #endif
 
@@ -1095,7 +1252,7 @@ typedef ASIRESULT (AILCALL FAR *ASI_STARTUP)(void);
 // Shut down ASI codec
 //
 
-typedef ASIRESULT (AILCALL FAR *ASI_SHUTDOWN)(void);
+typedef ASIRESULT (AILCALL FAR * ASI_SHUTDOWN)(void);
 
 //
 // Return codec error message, or NULL if no errors have occurred since
@@ -1104,7 +1261,7 @@ typedef ASIRESULT (AILCALL FAR *ASI_SHUTDOWN)(void);
 // The ASI error text state is global to all streams
 //
 
-typedef C8 FAR *  (AILCALL FAR *ASI_ERROR)(void);
+typedef C8 FAR *  (AILCALL FAR * ASI_ERROR)(void);
 
 //############################################################################
 //##                                                                        ##
@@ -1122,11 +1279,11 @@ typedef HASISTREAM (AILCALL FAR *ASI_STREAM_OPEN) (U32           user,          
 
 //
 // Translate data in stream, returning # of bytes actually decoded or encoded
-// 
-// Any number of bytes may be requested.  Requesting more data than is 
+//
+// Any number of bytes may be requested.  Requesting more data than is
 // available in the codec's internal buffer will cause the AILASIFETCHCB
 // handler to be called to fetch more data from the stream.
-// 
+//
 
 typedef S32  (AILCALL FAR *ASI_STREAM_PROCESS) (HASISTREAM  stream,              // Handle of stream
                                                 void FAR   *buffer,              // Destination for processed data
@@ -1173,7 +1330,7 @@ typedef S32 (AILCALL FAR *ASI_STREAM_ATTRIBUTE) (HASISTREAM stream,
 
 typedef S32 (AILCALL FAR *ASI_STREAM_SET_PREFERENCE) (HASISTREAM stream,
                                                       HATTRIB    preference,
-                                                      void FAR*  value);
+                                                      void const FAR  *  value);
 
 //
 // Close stream, freeing handle and all internally-allocated resources
@@ -1229,7 +1386,7 @@ typedef M3DRESULT (AILCALL FAR *M3D_SHUTDOWN)(void);
 typedef C8 FAR *  (AILCALL FAR *M3D_ERROR)(void);
 
 typedef S32       (AILCALL FAR *M3D_SET_PROVIDER_PREFERENCE)(HATTRIB preference,
-                                                             void FAR*  value);
+                                                             void const FAR *  value);
 
 typedef M3DRESULT  (AILCALL FAR * M3D_ACTIVATE)(S32 enable);
 
@@ -1250,7 +1407,7 @@ typedef void       (AILCALL FAR * M3D_RESUME_3D_SAMPLE)(H3DSAMPLE samp);
 typedef void       (AILCALL FAR * M3D_END_3D_SAMPLE)(H3DSAMPLE samp);
 
 typedef S32        (AILCALL FAR * M3D_SET_3D_SAMPLE_DATA)(H3DSAMPLE         samp,
-                                                          AILSOUNDINFO FAR *info);
+                                                          AILSOUNDINFO const FAR  *info);
 
 typedef void       (AILCALL FAR * M3D_SET_3D_SAMPLE_VOLUME)(H3DSAMPLE samp,
                                                             S32       volume);
@@ -1273,7 +1430,7 @@ typedef U32        (AILCALL FAR * M3D_3D_SAMPLE_STATUS)(H3DSAMPLE samp);
 
 typedef U32        (AILCALL FAR * M3D_3D_SAMPLE_ATTRIBUTE)(H3DSAMPLE samp, HATTRIB index);
 
-typedef S32        (AILCALL FAR * M3D_3D_SET_SAMPLE_PREFERENCE)(H3DSAMPLE samp, HATTRIB preference, void FAR* value);
+typedef S32        (AILCALL FAR * M3D_3D_SET_SAMPLE_PREFERENCE)(H3DSAMPLE samp, HATTRIB preference, void const FAR * value);
 
 typedef S32        (AILCALL FAR * M3D_3D_SAMPLE_VOLUME)(H3DSAMPLE samp);
 
@@ -1412,16 +1569,19 @@ typedef void (AILCALL FAR *MIXER_SHUTDOWN)(void);
 typedef void (AILCALL FAR *MIXER_FLUSH)   (S32 FAR *dest,
                                            S32      len,
                                            S32 FAR *reverb_buffer,
-                                           S32      reverb_level,
-                                           U32      MMX_available);
+                                           S32      reverb_level
+#ifdef IS_X86
+                                           ,U32             MMX_available
+#endif
+                                           );
 
 //
 // Perform audio mixing operation
 //
 
-typedef void (AILCALL FAR *MIXER_MERGE)   (void FAR * FAR *src,
+typedef void (AILCALL FAR *MIXER_MERGE)   (void const FAR * FAR *src,
                                            U32        FAR *src_fract,
-                                           void FAR       *src_end,
+                                           void const FAR *src_end,
                                            S32  FAR * FAR *dest,
                                            void FAR       *dest_end,
                                            S32  FAR       *left_val,
@@ -1429,18 +1589,31 @@ typedef void (AILCALL FAR *MIXER_MERGE)   (void FAR * FAR *src,
                                            S32             playback_ratio,
                                            S32             scale_left,
                                            S32             scale_right,
-                                           U32             operation,
-                                           U32             MMX_available);
+                                           U32             operation
+#ifdef IS_X86
+                                           ,U32             MMX_available
+#endif
+                                           );
 
 //
 // Translate mixer buffer contents to final output format
 //
 
-typedef void (AILCALL FAR *MIXER_COPY) (void FAR *src,
+#ifdef IS_MAC
+
+typedef void (AILCALL FAR *MIXER_COPY) (void const FAR  *src,
+                                        S32       src_len,
+                                        void FAR *dest,
+                                        U32       operation,
+                                        U32       big_endian_output);
+#else
+
+typedef void (AILCALL FAR *MIXER_COPY) (void const FAR  *src,
                                         S32       src_len,
                                         void FAR *dest,
                                         U32       operation,
                                         U32       MMX_available);
+#endif
 #else
 
 //
@@ -1491,7 +1664,7 @@ typedef void (AILCALL FAR *MIXER_MERGE)   (U32             src_sel,
 // Translate mixer buffer contents to final output format
 //
 
-typedef void (AILCALL FAR *MIXER_COPY) (void FAR *src,
+typedef void (AILCALL FAR *MIXER_COPY) (void const FAR *src,
                                         S32       src_len,
                                         void FAR *dest,
                                         U32       operation,
@@ -1515,6 +1688,7 @@ typedef struct _SAMPLE FAR * HSAMPLE;           // Handle to sample
 typedef struct _SEQUENCE FAR * HSEQUENCE;       // Handle to sequence
 
 typedef S32 HTIMER;                             // Handle to timer
+
 
 #ifdef IS_DOS
 
@@ -1659,7 +1833,7 @@ VDI_CALL;
 // Function pointer types
 //
 
-typedef void (AILCALLBACK FAR* AILINCB)       (void FAR *data, S32 len, U32 user_data);
+typedef void (AILCALLBACK FAR* AILINCB)       (void const FAR *data, S32 len, U32 user_data);
 
 typedef void (AILCALLBACK FAR* AILTIMERCB)    (U32 user);
 
@@ -1824,10 +1998,11 @@ typedef struct _SAMPLE           // Sample instance
 
    U32      status;              // SMP_ flags: _FREE, _DONE, _PLAYING
 
-   void FAR *start[2];           // Sample buffer address (W)
+   void const FAR *start[2];     // Sample buffer address (W)
    U32       len  [2];           // Sample buffer size in bytes (W)
    U32       pos  [2];           // Index to next byte (R/W)
    U32       done [2];           // Nonzero if buffer with len=0 sent by app
+   S32       reset_ASI [2];      // Reset the ASI decoder at the end of the buffer
 
    U32      src_fract;           // Fractional part of source address
    S32      left_val;            // Mixer source value from end of last buffer
@@ -1909,7 +2084,39 @@ typedef struct _SAMPLE           // Sample instance
 }
 SAMPLE;
 
-#ifdef IS_WINDOWS
+#if defined(IS_WINDOWS) || defined(IS_MAC)
+
+DXDEC  U32     AILCALL  AIL_get_timer_highest_delay   (void);
+
+DXDEC  void         AILCALL AIL_serve(void);
+
+#ifdef IS_MAC
+
+typedef void * LPSTR;
+
+#define WHDR_DONE 0
+
+typedef struct _WAVEIN
+{
+  long temp;
+} * HWAVEIN;
+
+typedef struct _WAVEHDR
+{
+  S32  dwFlags;
+  S32  dwBytesRecorded;
+  S32  dwUser;
+  S32  temp;
+  void * lpData;
+  S32  dwBufferLength;
+  S32  longdwLoops;
+  S32  dwLoops;
+  void * lpNext;
+  U32  * reserved;
+
+} WAVEHDR, * LPWAVEHDR;
+
+#endif
 
 typedef struct _DIG_INPUT_DRIVER FAR *HDIGINPUT; // Handle to digital input driver
 
@@ -1920,6 +2127,11 @@ typedef struct _DIG_INPUT_DRIVER    // Handle to digital input driver
    HTIMER background_timer;         // Background timer handle
 
    AIL_INPUT_INFO info;             // Input device descriptor
+   
+   S32       input_enabled;         // 1 if enabled, 0 if not
+
+#ifndef IS_MAC
+
    U32          callback_user;      // Callback user value
 
    //
@@ -1931,7 +2143,6 @@ typedef struct _DIG_INPUT_DRIVER    // Handle to digital input driver
 
    U8        silence;               // Silence value for current format (0 or 128)
 
-   S32       input_enabled;         // 1 if enabled, 0 if not
    S32       device_active;         // 1 if buffers submittable, 0 if not
 
    //
@@ -1940,6 +2151,57 @@ typedef struct _DIG_INPUT_DRIVER    // Handle to digital input driver
 
    HWAVEIN          hWaveIn;        // Handle to wave input device
    volatile WAVEHDR wavehdr[2];     // Handles to wave headers
+
+#else
+  Boolean  timer_started;
+  Boolean  locked;
+  Boolean  enter_lock;
+  U32      saved_period;
+
+  void*    my_vars;
+
+  //
+  // Input related
+  //
+
+  U32    input_buffer_size;
+  char   * input_buffers[2];
+
+  //
+  //   Mix related
+  //
+
+  char * build_buffer;
+  U32  build_buffer_size;
+
+  //
+  // Output related
+  //
+  struct
+  {
+    S8 * buffer;
+    S8 * buffer_end;
+
+    U32  size;
+    S8 * right_margine;
+    S8 * current_head;
+    S8 * current_tail;
+  } output_buffer;
+
+  S32  mix_operation;
+  S32  playback_ratio;
+  U32  src_fract;
+  S8 * current_head;
+  S32  left_val;
+  S32  right_val;
+
+  U32  stored_sample_size;
+  U32  stored_number_of_channels;
+
+  U32  last_rw_delta;
+  U32  period;
+
+#endif
 }
 DIG_INPUT_DRIVER;
 
@@ -1968,7 +2230,34 @@ typedef struct _DIG_DRIVER          // Handle to digital audio driver
 
    S32         playing;             // Playback active if non-zero
 
+#ifdef IS_MAC
+   U32         n_samples_allocated;
+   U32         n_samples_used;
+   U32         n_samples_played;
+   SAMPLE      *samples;             // Pointer to SAMPLEs
+
+   HDIGDRIVER  next;                // Pointer to next HDIGDRIVER in use
+   U32         reset_works;         // TRUE if OK to do waveOutReset
+   U32         request_reset;       // If nonzero, do waveOutReset ASAP
+   S32         released;            // has the sound manager been released?
+
+   ExtSoundHeader sound_header;
+   SndChannelPtr  sound_channel;
+   SndCallBackUPP global_callback;
+   Ptr            buffers[2];
+   Boolean        loaded[2];
+   U32            work_buffer;
+   U32            play_buffer;
+   U32            load_pos;
+   U32            load_size;
+   Boolean        load;
+   U32            start_time;
+   void*          background_processor;
+
+#else
    HSAMPLE     samples;             // Pointer to list of SAMPLEs
+#endif
+
    S32         n_samples;           // # of SAMPLEs
 
    S32         build_size;          // # of bytes in build buffer
@@ -2007,6 +2296,8 @@ typedef struct _DIG_DRIVER          // Handle to digital audio driver
    U32                    guid;        // The guid id of the ds driver
    AILLPDIRECTSOUND       pDS;         // DirectSound output driver (don't
                                        // use with Smacker directly anymore!)
+
+   U32                    ds_priority; // priority opened with
 
    S32                    emulated_ds; // is ds emulated or not?
    AILLPDIRECTSOUNDBUFFER lppdsb;      // primary buffer or null
@@ -2051,6 +2342,8 @@ typedef struct _DIG_DRIVER          // Handle to digital audio driver
 
 #else
 
+   #ifdef IS_DOS
+
    // must be first in the DOS section
    void       *DMA[2];              // Protected-mode pointers to half-buffers
                                     // (note that DMA[0] may != DMA_buf)
@@ -2067,10 +2360,14 @@ typedef struct _DIG_DRIVER          // Handle to digital audio driver
 
    DIG_DDT    *DDT;                 // Protected-mode pointer to DDT
    DIG_DST    *DST;                 // Protected-mode pointer to DST
+   
+   #endif
 
 #endif
 
+#ifdef IS_X86
    S32         use_MMX;             // Use MMX with this driver if TRUE
+#endif
 
    void   FAR *decode_buffer;       // Buffer used by optional ASI pipeline decoder
    S32         decode_buffer_size;  // # of bytes in decode buffer
@@ -2093,6 +2390,11 @@ typedef struct _DIG_DRIVER          // Handle to digital audio driver
    S32 FAR *reverb_buffer;
    S32      reverb_buffer_size;
    S32      reverb_buffer_position;
+
+#ifdef IS_WINDOWS
+   S32                  no_wom_done;    // don't process WOM_DONEs on this driver
+   U32                  wom_done_buffers;
+#endif
 }
 DIG_DRIVER;
 
@@ -2135,11 +2437,11 @@ typedef struct _SEQUENCE                  // XMIDI sequence state table
 
    U32      status;                       // SEQ_ flags
 
-   void    FAR *TIMB;                     // XMIDI IFF chunk pointers
-   void    FAR *RBRN;
-   void    FAR *EVNT;
+   void const   FAR *TIMB;                // XMIDI IFF chunk pointers
+   void const   FAR *RBRN;
+   void const   FAR *EVNT;
 
-   U8      FAR *EVNT_ptr;                 // Current event pointer
+   U8 const     FAR *EVNT_ptr;            // Current event pointer
 
    U8      FAR *ICA;                      // Indirect Controller Array
 
@@ -2172,7 +2474,7 @@ typedef struct _SEQUENCE                  // XMIDI sequence state table
    S32      beat_fraction;
    S32      time_per_beat;
 
-   void FAR *FOR_ptrs      [FOR_NEST];    // Loop stack
+   void const FAR *FOR_ptrs[FOR_NEST];    // Loop stack
    S32      FOR_loop_count [FOR_NEST];
 
    S32      chan_map       [NUM_CHANS];   // Physical channel map for sequence
@@ -2195,6 +2497,14 @@ typedef struct _SEQUENCE                  // XMIDI sequence state table
    S32      EOS_IsWin32s;                 // Is this a Win32s callback
 #endif
 } SEQUENCE;
+
+#ifdef IS_MAC
+
+struct MIDIHDR;
+struct MIDIOUT;
+typedef struct MIDIOUT* HMIDIOUT;
+
+#endif
 
 typedef struct _MDI_DRIVER          // Handle to XMIDI driver
 {
@@ -2223,23 +2533,30 @@ typedef struct _MDI_DRIVER          // Handle to XMIDI driver
 
    S32         system_data[8];      // Miscellaneous system data
 
+#if defined(IS_WINDOWS) || defined(IS_MAC)
+   
+   S32         released;            // has the hmidiout handle been released
+   U32         deviceid;            // ID of the MIDI device
+   U8      FAR *sysdata;            // SysEx buffer
+
+#endif
+
 #ifdef IS_WINDOWS
 
    S32      EVENT_IsWin32s;         // Is this a Win32s callback
    S32      TIMBRE_IsWin32s;        // Is this a Win32s callback
 
    MIDIHDR FAR *mhdr;               // SysEx header
-   U8      FAR *sysdata;            // SysEx buffer
 
    HMDIDRIVER  next;                // Pointer to next HMDIDRIVER in use
    S32      callingCT;              // Calling EXE's task number (16 bit only)
    S32      callingDS;              // Calling EXE's DS (used in 16 bit only)
 
    HMIDIOUT    hMidiOut;            // MIDI output driver
-   U32         deviceid;            // ID of the MIDI device
-   S32         released;            // has the hmidiout handle been released
 
 #else
+
+   #ifdef IS_DOS
 
    S32        message_count;       // MIDI message count
    S32        offset;              // MIDI buffer offset
@@ -2248,8 +2565,19 @@ typedef struct _MDI_DRIVER          // Handle to XMIDI driver
 
    MDI_DDT    *DDT;                // Protected-mode pointer to DDT
    MDI_DST    *DST;                // Protected-mode pointer to DST
+   #else
+     #ifdef IS_MAC
+       struct MIDIHDR FAR *mhdr;               // SysEx header
+       HMDIDRIVER  next;                // Pointer to next HMDIDRIVER in use
+       HMIDIOUT    hMidiOut;            // MIDI output driver
+       U32      last_us_time;
+       long     period_counter;
+       long     current_period_sum;
+     #endif
+   #endif
 
 #endif
+
 }
 MDI_DRIVER;
 
@@ -2400,24 +2728,56 @@ DXDEC  void       AILCALL AIL_mem_free_lock (void FAR *ptr);
 
 DXDEC  S32        AILCALL AIL_file_error   (void);
 
-DXDEC  S32        AILCALL AIL_file_size    (char FAR   *filename);
+DXDEC  S32        AILCALL AIL_file_size    (char const FAR  *filename);
 
-DXDEC  void FAR * AILCALL AIL_file_read    (char FAR   *filename,
+DXDEC  void FAR * AILCALL AIL_file_read    (char const FAR   *filename,
                                            void FAR *dest);
 
-DXDEC  S32        AILCALL AIL_file_write   (char FAR   *filename,
-                                            void FAR *buf,
+DXDEC  S32        AILCALL AIL_file_write   (char const FAR    *filename,
+                                            void const FAR  *buf,
                                             U32       len);
 
 DXDEC  S32        AILCALL AIL_WAV_file_write
-                                           (char FAR   *filename,
-                                            void FAR *buf,
+                                           (char const FAR    *filename,
+                                            void const FAR  *buf,
                                             U32       len,
                                             S32       rate,
                                             S32       format);
 
-DXDEC  S32        AILCALL AIL_file_append  (char FAR*filename,
-                                            void FAR*buf, U32 len);
+DXDEC  S32        AILCALL AIL_file_append  (char const FAR *filename,
+                                            void const FAR *buf, U32 len);
+
+#ifdef IS_MAC
+
+
+DXDEC  S32        AILCALL AIL_file_fss_size(FSSpec const FAR  *filename);
+
+DXDEC  void FAR * AILCALL AIL_file_fss_read(FSSpec const FAR   *filename,
+                                            void FAR *dest);
+
+DXDEC  S32        AILCALL AIL_file_fss_write(FSSpec const FAR    *filename,
+                                             void const FAR  *buf,
+                                             U32       len);
+
+DXDEC  S32        AILCALL AIL_file_fss_attrib_write
+                                            (FSSpec const FAR    *filename,
+                                             void const FAR  *buf,
+                                             U32       len,
+                                             U32       type,
+                                             U32       creator );
+
+DXDEC  S32        AILCALL AIL_WAV_file_fss_write
+                                           (FSSpec const FAR    *filename,
+                                            void const FAR  *buf,
+                                            U32       len,
+                                            S32       rate,
+                                            S32       format);
+
+DXDEC void * AILCALL AIL_mem_use_malloc(void * AILCALLBACK (*fn)(U32));
+DXDEC void * AILCALL AIL_mem_use_free  (void AILCALLBACK (*fn)(void *));
+
+#endif
+
 #ifdef IS_DOS
 
 extern void * AILCALLBACK (*AIL_mem_alloc) (U32);
@@ -2512,6 +2872,17 @@ void MSSBreakPoint();
 // High-level support services
 //
 
+#ifdef IS_MAC
+
+#if !defined(max)
+#define max(a,b)  (((a) > (b)) ? (a) : (b))
+#endif
+#if !defined(min)
+#define min(a,b)  (((a) < (b)) ? (a) : (b))
+#endif
+
+#endif
+
 #ifdef IS_DOS
 
 #ifdef IS_WATCOM
@@ -2552,20 +2923,33 @@ DXDEC  S32     AILCALL  AIL_set_preference            (U32         number,
 
 DXDEC char FAR *AILCALL  AIL_last_error                (void);
 
-DXDEC  void    AILCALL  AIL_set_error                 (char FAR* error_msg);
+DXDEC  void    AILCALL  AIL_set_error                 (char const FAR * error_msg);
 
 //
 // Low-level support services
 //
 
-DXDEC  void    __cdecl  AIL_debug_printf              (C8 FAR *fmt, ...);
+DXDEC  void    
+#ifndef IS_MAC
+__cdecl
+#endif
+AIL_debug_printf              (C8 const FAR *fmt, ...);
+
+#ifdef IS_X86
+
 DXDEC  U32     AILCALL  AIL_MMX_available             (void);
+
+#endif
 
 DXDEC  void    AILCALL  AIL_lock                      (void);
 DXDEC  void    AILCALL  AIL_unlock                    (void);
 
+#ifdef IS_WIN32
+
 DXDEC  void    AILCALL  AIL_lock_mutex                (void);
 DXDEC  void    AILCALL  AIL_unlock_mutex              (void);
+
+#endif
 
 DXDEC  void    AILCALL  AIL_delay                     (S32         intervals);
 
@@ -2600,19 +2984,43 @@ DXDEC  void    AILCALL  AIL_release_all_timers        (void);
 
 #ifdef IS_WIN32
 
-DXDEC  U32     AILCALL  AIL_get_timer_highest_delay   (void);
+#ifndef BUILD_MSS
+
+// static function that handles shutdown
+int __cdecl MSS_auto_cleanup(void);
+
+#ifdef _MSC_VER
+// on MSVC, automatically register a cleanup function
+//ODCODENOTE Remove
+//#define AIL_startup() (MSS_auto_cleanup(),AIL_startup())
+#endif
+
+#endif
 
 DXDEC  HWND    AILCALL  AIL_HWND                      (void);
 
+#else
+  #ifdef IS_MAC
+    DXDEC ProcessSerialNumber AIL_Process(void);
+  #endif
 #endif
 
 //
 // high-level digital services
 //
 
+DXDEC HDIGDRIVER AILCALL AIL_open_digital_driver( U32 frequency,
+                                                  S32 bits,
+                                                  S32 channel,
+                                                  U32 flags );
+
+#define AIL_OPEN_DIGITAL_FORCE_PREFERENCE 1
+
+DXDEC void AILCALL AIL_close_digital_driver( HDIGDRIVER dig );
+
 #ifdef IS_WINDOWS
 
-#define AIL_DLL_version(str,len)        \
+#define AIL_MSS_version(str,len)        \
 {                                       \
   HINSTANCE l=LoadLibrary(MSSDLLNAME);  \
   if ((U32)l<=32)                       \
@@ -2624,7 +3032,7 @@ DXDEC  HWND    AILCALL  AIL_HWND                      (void);
 }
 
 DXDEC  S32          AILCALL AIL_waveOutOpen          (HDIGDRIVER   FAR *drvr,
-                                                      LPHWAVEOUT   FAR *lphWaveOut,
+                                                      LPHWAVEOUT   FAR  *lphWaveOut,
                                                       S32             wDeviceID,
                                                       LPWAVEFORMAT      lpFormat);
 
@@ -2635,7 +3043,67 @@ DXDEC  S32          AILCALL AIL_digital_handle_release(HDIGDRIVER drvr);
 DXDEC  S32          AILCALL AIL_digital_handle_reacquire
                                                      (HDIGDRIVER drvr);
 
-DXDEC  void         AILCALL AIL_serve(void);
+#else
+
+#ifdef IS_MAC
+
+typedef struct MSS_VersionType_
+{
+  Str255 version_name;
+} MSS_VersionType;
+
+#define AIL_MSS_version(str,len)                        \
+{                                                       \
+  long _res = OpenResFile("\pMiles Shared Library");    \
+  if (_res==-1)                                         \
+  {                                                     \
+    str[0]=0;                                           \
+  }                                                     \
+  else                                                  \
+  {                                                     \
+    Handle _H;                                          \
+    short _Err;                                         \
+    long _cur= CurResFile();                            \
+    UseResFile(_res);                                   \
+    _H = GetResource('vers', 2);                        \
+    _Err = ResError();                                  \
+    if((_Err != noErr) || (_H==0))                      \
+    {                                                   \
+      str[0]=0;                                         \
+      UseResFile(_cur);                                 \
+      CloseResFile(_res);                               \
+    }                                                   \
+    else                                                \
+    {                                                   \
+      if (GetHandleSize(_H)==0)                         \
+      {                                                 \
+        str[0]=0;                                       \
+        UseResFile(_cur);                               \
+        CloseResFile(_res);                             \
+      }                                                 \
+      else                                              \
+      {                                                 \
+        MSS_VersionType * _vt = (MSS_VersionType*)*_H;  \
+        if ((U32)_vt->version_name[6]>4)                \
+          _vt->version_name[6]-=4;                      \
+        else                                            \
+          _vt->version_name[6]=0;                       \
+        if (((U32)len) <= ((U32)_vt->version_name[6]))  \
+          _vt->version_name[6] = (U8)len-1;             \
+        memcpy( str, _vt->version_name+11, _vt->version_name[6] ); \
+        str[_vt->version_name[6]]=0;                    \
+        UseResFile(_cur);                               \
+        CloseResFile(_res);                             \
+      }                                                 \
+      ReleaseResource(_H);                              \
+    }                                                   \
+  }                                                     \
+}
+
+DXDEC  S32          AILCALL AIL_digital_handle_release(HDIGDRIVER drvr);
+
+DXDEC  S32          AILCALL AIL_digital_handle_reacquire
+                                                     (HDIGDRIVER drvr);
 
 #else
 
@@ -2645,7 +3113,7 @@ DXDEC  void         AILCALL AIL_serve(void);
 
 DXDEC IO_PARMS *   AILCALL AIL_get_IO_environment    (AIL_DRIVER *drvr);
 
-DXDEC AIL_DRIVER*  AILCALL AIL_install_driver        (U8      *driver_image,
+DXDEC AIL_DRIVER*  AILCALL AIL_install_driver        (U8 const     *driver_image,
                                                       U32       n_bytes);
 
 DXDEC void         AILCALL AIL_uninstall_driver      (AIL_DRIVER *drvr);
@@ -2653,19 +3121,20 @@ DXDEC void         AILCALL AIL_uninstall_driver      (AIL_DRIVER *drvr);
 DXDEC S32         AILCALL AIL_install_DIG_INI       (HDIGDRIVER *dig);
 
 DXDEC HDIGDRIVER   AILCALL AIL_install_DIG_driver_file
-                                                    (char       *filename,
+                                                    (char const *filename,
                                                      IO_PARMS   *IO);
 
 DXDEC void         AILCALL AIL_uninstall_DIG_driver  (HDIGDRIVER  dig);
 
 
 DXDEC HDIGDRIVER   AILCALL AIL_install_DIG_driver_image
-                                                    (void     *driver_image,
+                                                    (void const    *driver_image,
                                                      U32     size,
                                                      IO_PARMS *IO);
 #endif
+#endif
 
-DXDEC char FAR*     AILCALL AIL_set_redist_directory(char  FAR*dir);
+DXDEC char FAR*     AILCALL AIL_set_redist_directory(char const FAR*dir);
 
 DXDEC  S32          AILCALL AIL_digital_CPU_percent   (HDIGDRIVER dig);
 
@@ -2675,7 +3144,7 @@ DXDEC  HSAMPLE      AILCALL AIL_allocate_sample_handle
                                                       (HDIGDRIVER dig);
 
 DXDEC  HSAMPLE      AILCALL AIL_allocate_file_sample  (HDIGDRIVER dig,
-                                                       void       FAR *file_image,
+                                                       void const       FAR *file_image,
                                                        S32         block);
 
 DXDEC  void         AILCALL AIL_release_sample_handle (HSAMPLE S);
@@ -2683,12 +3152,12 @@ DXDEC  void         AILCALL AIL_release_sample_handle (HSAMPLE S);
 DXDEC  void         AILCALL AIL_init_sample           (HSAMPLE S);
 
 DXDEC  S32          AILCALL AIL_set_sample_file       (HSAMPLE   S,
-                                                       void FAR *file_image,
+                                                       void const FAR *file_image,
                                                        S32       block);
 
 DXDEC  S32          AILCALL AIL_set_named_sample_file (HSAMPLE   S,
-                                                       C8   FAR *file_type_suffix,
-                                                       void FAR *file_image,
+                                                       C8 const   FAR *file_type_suffix,
+                                                       void const FAR *file_image,
                                                        S32       file_size,
                                                        S32       block);
 
@@ -2706,7 +3175,7 @@ DXDEC  void         AILCALL AIL_set_sample_adpcm_block_size
                                                      U32     blocksize);
 
 DXDEC  void         AILCALL AIL_set_sample_address    (HSAMPLE S,
-                                                     void   FAR *start,
+                                                     void const   FAR *start,
                                                      U32     len);
 
 DXDEC  void         AILCALL AIL_set_sample_type       (HSAMPLE S,
@@ -2776,8 +3245,11 @@ DXDEC  S32      AILCALL AIL_sample_buffer_ready      (HSAMPLE S);
 
 DXDEC  void     AILCALL AIL_load_sample_buffer       (HSAMPLE S,
                                                      U32     buff_num,
-                                                     void   FAR *buffer,
+                                                     void const   FAR *buffer,
                                                      U32     len);
+
+DXDEC  void     AILCALL AIL_request_EOB_ASI_reset   (HSAMPLE S,
+                                                     U32     buff_num);
 
 DXDEC  S32      AILCALL AIL_sample_buffer_info      (HSAMPLE S, //)
                                                     U32     FAR *pos0,
@@ -2846,14 +3318,14 @@ DXDEC  void     AILCALL AIL_sample_ms_position     (HSAMPLE    S, //)
 // Digital input services
 //
 
-#ifdef IS_WINDOWS
+#if defined(IS_WINDOWS) || defined (IS_MAC)
 
 DXDEC HDIGINPUT AILCALL AIL_open_input             (AIL_INPUT_INFO FAR *info);
 
 DXDEC void      AILCALL AIL_close_input            (HDIGINPUT         dig);
 
 DXDEC AIL_INPUT_INFO FAR *
-                AILCALL AIL_input_info             (HDIGINPUT         dig);
+                AILCALL AIL_get_input_info         (HDIGINPUT         dig);
 
 DXDEC S32       AILCALL AIL_set_input_state        (HDIGINPUT         dig,
                                                     S32               enable);
@@ -2863,6 +3335,22 @@ DXDEC S32       AILCALL AIL_set_input_state        (HDIGINPUT         dig,
 //
 // High-level XMIDI services
 //
+
+DXDEC HMDIDRIVER AILCALL AIL_open_XMIDI_driver( U32 flags );
+
+#define AIL_OPEN_XMIDI_NULL_DRIVER 1
+
+DXDEC void AILCALL AIL_close_XMIDI_driver( HMDIDRIVER mdi );
+
+#ifdef IS_MAC
+
+DXDEC  S32          AILCALL AIL_MIDI_handle_release
+                                                 (HMDIDRIVER mdi);
+
+DXDEC  S32          AILCALL AIL_MIDI_handle_reacquire
+                                                 (HMDIDRIVER mdi);
+
+#else
 
 #ifdef IS_WINDOWS
 
@@ -2880,23 +3368,25 @@ DXDEC  S32          AILCALL AIL_MIDI_handle_reacquire
 
 #else
 
+#ifdef IS_DOS
+
 DXDEC S32         AILCALL AIL_install_MDI_INI       (HMDIDRIVER *mdi);
 
 DXDEC HMDIDRIVER   AILCALL AIL_install_MDI_driver_file
-                                                    (char       *filename,
+                                                    (char const *filename,
                                                      IO_PARMS   *IO);
 
 DXDEC void         AILCALL AIL_uninstall_MDI_driver  (HMDIDRIVER  mdi);
 
 
 DXDEC HMDIDRIVER   AILCALL AIL_install_MDI_driver_image
-                                                    (void       *driver_image,
+                                                    (void const *driver_image,
                                                      U32       size,
                                                      IO_PARMS   *IO);
 
 DXDEC S32     AILCALL AIL_MDI_driver_type           (HMDIDRIVER  mdi);
 
-DXDEC void    AILCALL AIL_set_GTL_filename_prefix   (char      *prefix);
+DXDEC void    AILCALL AIL_set_GTL_filename_prefix   (char const*prefix);
 
 DXDEC S32     AILCALL AIL_timbre_status             (HMDIDRIVER  mdi,
                                                      S32        bank,
@@ -2916,6 +3406,10 @@ DXDEC void    AILCALL AIL_unprotect_timbre          (HMDIDRIVER  mdi,
 
 #endif
 
+#endif
+
+#endif
+
 DXDEC  HSEQUENCE    AILCALL AIL_allocate_sequence_handle
                                                      (HMDIDRIVER mdi);
 
@@ -2923,7 +3417,7 @@ DXDEC  void         AILCALL AIL_release_sequence_handle
                                                      (HSEQUENCE S);
 
 DXDEC  S32          AILCALL AIL_init_sequence         (HSEQUENCE S,
-                                                     void     FAR *start,
+                                                     void const     FAR *start,
                                                      S32       sequence_num);
 
 DXDEC  void         AILCALL AIL_start_sequence        (HSEQUENCE S);
@@ -3033,12 +3527,12 @@ DXDEC  void     AILCALL AIL_send_channel_voice_message
                                                       S32         data_2);
 
 DXDEC  void     AILCALL AIL_send_sysex_message        (HMDIDRIVER mdi,
-                                                       void       FAR *buffer);
+                                                       void const       FAR *buffer);
 
 DXDEC  HWAVESYNTH
                 AILCALL AIL_create_wave_synthesizer   (HDIGDRIVER dig,
                                                     HMDIDRIVER mdi,
-                                                       void       FAR *wave_lib,
+                                                       void const       FAR *wave_lib,
                                                        S32         polyphony);
 
 DXDEC  void     AILCALL AIL_destroy_wave_synthesizer  (HWAVESYNTH W);
@@ -3072,6 +3566,9 @@ typedef struct _REDBOOK {
   U32 readcontents;
   REDBOOKTRACKINFO info;
 #endif
+#ifdef IS_MAC
+  short vDRefNum;
+#endif
 } REDBOOK;
 
 typedef struct _REDBOOK FAR* HREDBOOK;
@@ -3084,7 +3581,11 @@ typedef struct _REDBOOK FAR* HREDBOOK;
 
 DXDEC  HREDBOOK   AILCALL AIL_redbook_open(U32 which);
 
+#ifdef IS_MAC
+DXDEC  HREDBOOK   AILCALL AIL_redbook_open_volume(char const * drive);
+#else
 DXDEC  HREDBOOK   AILCALL AIL_redbook_open_drive(S32 drive);
+#endif
 
 DXDEC  void       AILCALL AIL_redbook_close(HREDBOOK hand);
 
@@ -3138,72 +3639,97 @@ typedef struct _STREAM {
 
   HSAMPLE samp;       // the sample handle
 
-  U32 fileh;       // the open file handle
+  U32 fileh;          // the open file handle
 
-  U8 FAR* bufs[3]; // the data buffers
-  U32 bufsizes[3]; // the size of each buffer
+  U8 FAR* bufs[3];    // the data buffers
+  U32 bufsizes[3];    // the size of each buffer
+  S32 reset_ASI[3];   // should we reset the ASI at the end of the buffer?
+  S32 bufstart[3];    // offset of where this buffer started
+  void FAR* asyncs[3];// async read structures
 
-  S32 bufsize;     // size of each buffer
-  S32 readsize;    // size of each read block
+  S32 loadedbufstart[2]; // offset of where the loaded buffer started
+  S32 loadedorder[2]; // order of the buffers as they were loaded
+  S32 loadorder;      // incremented as each buffer is loaded
 
-  U32 buf1;        // 0,1,2 (current buffer that we are reading into)
-  S32 size1;       // holds the current amount of data read
+  S32 bufsize;        // size of each buffer
+  S32 readsize;       // size of each read block
 
-  U32 buf2;        // 0,1,2 (the next buffer that we are reading into)
-  S32 size2;       // next buffer loaded up to
+  U32 buf1;           // 0,1,2 (current buffer that we are reading into)
+  S32 size1;          // holds the current amount of data read
 
-  U32 buf3;        // 0,1,2 (the next buffer that we are reading into)
-  S32 size3;       // next buffer loaded up to
+  U32 buf2;           // 0,1,2 (the next buffer that we are reading into)
+  S32 size2;          // next buffer loaded up to
 
-  U32 datarate;    // datarate in bytes per second
-  S32 filerate;    // original datarate of the file
-  S32 filetype;    // file format type
-  U32 fileflags;   // file format flags (signed or unsigned)
-  S32 totallen;    // total length of the sound data
-  
-  S32 substart;    // subblock loop start
-  S32 sublen;      // subblock loop len
-  S32 subpadding;  // amount to pad the final block
+  U32 buf3;           // 0,1,2 (the next buffer that we are reading into)
+  S32 size3;          // next buffer loaded up to
 
-  U32 blocksize;   // ADPCM block size
-  S32 padding;     // padding to be done
-  S32 padded;      // padding done
+  U32 datarate;       // datarate in bytes per second
+  S32 filerate;       // original datarate of the file
+  S32 filetype;       // file format type
+  U32 fileflags;      // file format flags (signed or unsigned)
+  S32 totallen;       // total length of the sound data
 
-  S32 loadedsize;  // size that has been loaded
-  S32 loadedsome;  // have we done any loads?
+  S32 substart;       // subblock loop start
+  S32 sublen;         // subblock loop len
+  S32 subpadding;     // amount to pad the final block
 
-  U32 startpos;    // point that the sound data begins
-  U32 totalread;   // total bytes read from the disk
+  U32 blocksize;      // ADPCM block size
+  S32 padding;        // padding to be done
+  S32 padded;         // padding done
 
-  U32 loopsleft;   // how many loops are left
+  S32 loadedsome;     // have we done any loads?
 
-  U32 error;       // read error has occurred
+  U32 startpos;       // point that the sound data begins
+  U32 totalread;      // total bytes read from the disk
 
-  S32 preload;     // preload the file into the first buffer
-  S32 dontclose;   // don't close the file
-  S32 noback;      // no background processing
-  S32 alldone;     // alldone
-  S32 primeamount; // amount to load after a seek
-  S32 readatleast; // forced amount to read on next service
+  U32 loopsleft;      // how many loops are left
 
-  S32 playcontrol; // control: 0=stopped, 1=started, |8=paused, |16=sample paused
+  U32 error;          // read error has occurred
+
+  S32 preload;        // preload the file into the first buffer
+  U32 preloadpos;     // position to use in preload
+  S32 noback;         // no background processing
+  S32 alldone;        // alldone
+  S32 primeamount;    // amount to load after a seek
+  S32 readatleast;    // forced amount to read on next service
+
+  S32 playcontrol;    // control: 0=stopped, 1=started, |8=paused, |16=sample paused
 
   AILSTREAMCB callback;  // end of stream callback
 
-  S32 user_data[8];      // Miscellaneous user data
-  void FAR* next;        // pointer to next stream
+  S32 user_data[8];   // Miscellaneous user data
+  void FAR* next;     // pointer to next stream
 
-#ifdef IS_WINDOWS
-  S32 autostreaming;     // are we autostreaming this stream
-  S32 cb_IsWin32s;       // Is the callback win32s?
+#if defined(IS_WINDOWS) || defined(IS_MAC)
+  S32 autostreaming;  // are we autostreaming this stream
 #endif
 
-  S32 docallback;  // set when it time to poll for a callback
+#ifdef IS_WINDOWS
+  S32 cb_IsWin32s;    // Is the callback win32s?
+#endif
 
-} STREAM_TYPE;
+  S32 docallback;     // set when it time to poll for a callback
+
+#ifdef IS_MAC
+  IOParam  stream_param;
+  S32      donext;
+  S32      donext1;
+  U32      fillup;
+  U32      session;
+  U32      tamt;
+  U32      buf;
+  S32*     size;
+  S32*     done;
+  S32      done1;
+  S32      done2;
+  S32      done3;
+  Boolean  force_quit;
+#endif
+
+} MSTREAM_TYPE;
 
 
-DXDEC HSTREAM AILCALL AIL_open_stream(HDIGDRIVER dig, char FAR* filename, S32 stream_mem);
+DXDEC HSTREAM AILCALL AIL_open_stream(HDIGDRIVER dig, char const FAR * filename, S32 stream_mem);
 
 DXDEC void AILCALL AIL_close_stream(HSTREAM stream);
 
@@ -3269,6 +3795,59 @@ DXDEC  void    AILCALL AIL_stream_reverb     (HSTREAM S,
                                               F32 FAR *reverb_reflect_time,
                                               F32 FAR *reverb_decay_time);
 
+DXDEC  HPROVIDER    AILCALL AIL_set_stream_processor  (HSTREAM     S,
+                                                       SAMPLESTAGE pipeline_stage,
+                                                       HPROVIDER   provider);
+
+#ifdef IS_MAC
+typedef struct MSS_FILE
+{
+  S32 file_type; // 0 = char*, 1 = FSSpec*
+  void const FAR* file;
+} MSS_FILE;
+#else
+typedef char MSS_FILE;
+#endif
+
+typedef U32  (AILCALLBACK FAR*AIL_file_open_callback)  (MSS_FILE const FAR* Filename,
+                                                        U32 FAR* FileHandle);
+
+typedef void (AILCALLBACK FAR*AIL_file_close_callback) (U32 FileHandle);
+
+#define AIL_FILE_SEEK_BEGIN   0
+#define AIL_FILE_SEEK_CURRENT 1
+#define AIL_FILE_SEEK_END     2
+
+typedef S32  (AILCALLBACK FAR*AIL_file_seek_callback)  (U32 FileHandle,
+                                                        S32 Offset,
+                                                        U32 Type);
+
+typedef U32  (AILCALLBACK FAR*AIL_file_read_callback)  (U32 FileHandle,
+                                                        void FAR* Buffer,
+                                                        U32 Bytes);
+
+DXDEC  void  AILCALL AIL_set_file_callbacks  (AIL_file_open_callback opencb,
+                                              AIL_file_close_callback closecb,
+                                              AIL_file_seek_callback seekcb,
+                                              AIL_file_read_callback readcb);
+
+#ifdef IS_32
+
+typedef void FAR* (AILCALLBACK FAR*AIL_file_async_read_callback) (U32 FileHandle,
+                                                                  void FAR* Buffer,
+                                                                  U32 Bytes);
+
+typedef S32 (AILCALLBACK FAR*AIL_file_async_status_callback)  (void FAR* async,
+                                                               S32 wait,
+                                                               U32 FAR* BytesRead);
+
+DXDEC  void  AILCALL AIL_set_file_async_callbacks (AIL_file_open_callback opencb,
+                                                   AIL_file_close_callback closecb,
+                                                   AIL_file_seek_callback seekcb,
+                                                   AIL_file_async_read_callback areadcb,
+                                                   AIL_file_async_status_callback statuscb);
+
+#endif
 
 //
 // High-level DLS functions
@@ -3305,7 +3884,9 @@ typedef struct _DLSDEVICE {
 #ifdef IS_WINDOWS
   HMODULE lib;
 #else
+  #ifdef IS_DOS
   char FAR* DOSname;
+  #endif
 #endif
 } DLSDEVICE;
 
@@ -3341,10 +3922,10 @@ typedef struct _AILDOSDLS {
 
 
 DXDEC  HDLSDEVICE AILCALL AIL_DLS_open(HMDIDRIVER mdi, HDIGDRIVER dig,
-#ifdef IS_WINDOWS
-                                          char FAR* libname,
+#if defined(IS_WINDOWS) || defined(IS_MAC)
+                                          char const FAR * libname,
 #else
-                                          AILDOSDLS FAR* dosdls,
+                                          AILDOSDLS const FAR * dosdls,
 #endif
                                           U32 flags, U32 rate, S32 bits, S32 channels);
 
@@ -3359,9 +3940,9 @@ DXDEC  HDLSDEVICE AILCALL AIL_DLS_open(HMDIDRIVER mdi, HDIGDRIVER dig,
 
 DXDEC  void   AILCALL AIL_DLS_close(HDLSDEVICE dls, U32 flags);
 
-DXDEC  HDLSFILEID AILCALL AIL_DLS_load_file(HDLSDEVICE dls, char FAR* filename, U32 flags);
+DXDEC  HDLSFILEID AILCALL AIL_DLS_load_file(HDLSDEVICE dls, char const FAR* filename, U32 flags);
 
-DXDEC  HDLSFILEID AILCALL AIL_DLS_load_memory(HDLSDEVICE dls, void FAR* memfile, U32 flags);
+DXDEC  HDLSFILEID AILCALL AIL_DLS_load_memory(HDLSDEVICE dls, void const FAR* memfile, U32 flags);
 
 //
 // other parameters for AIL_DLS_unload
@@ -3386,6 +3967,10 @@ DXDEC  void   AILCALL AIL_DLS_get_reverb(HDLSDEVICE dls,
                                          F32 FAR*    reverb_reflect_time,
                                          F32 FAR*    reverb_decay_time);
 
+DXDEC  HPROVIDER    AILCALL AIL_set_DLS_processor     (HDLSDEVICE  dev,
+                                                       SAMPLESTAGE pipeline_stage,
+                                                       HPROVIDER   provider);
+
 
 //
 // Quick-integration service functions and data types
@@ -3393,7 +3978,7 @@ DXDEC  void   AILCALL AIL_DLS_get_reverb(HDLSDEVICE dls,
 
 typedef struct
 {
-   U32 FAR *data;
+   U32 const FAR *data;
    S32  size;
    S32  type;
    void FAR *handle;
@@ -3428,7 +4013,7 @@ typedef AUDIO_TYPE FAR * HAUDIO;        // Generic handle to any audio data type
 #define AIL_QUICK_MIDI_AND_SONICVIBES_DLS 5
 
 DXDEC S32     AILCALL
-#ifdef IS_WINDOWS
+#if defined(IS_WINDOWS) || defined(IS_MAC)
                        AIL_quick_startup           (
 #else
                        AIL_quick_startup_with_start(void*       startup,
@@ -3445,9 +4030,13 @@ DXDEC void    AILCALL AIL_quick_handles             (HDIGDRIVER FAR* pdig,
                                                      HMDIDRIVER FAR* pmdi,
                                                      HDLSDEVICE FAR* pdls );
 
-DXDEC HAUDIO  AILCALL AIL_quick_load                (char   FAR *filename);
+DXDEC HAUDIO  AILCALL AIL_quick_load                (char const   FAR *filename);
 
-DXDEC HAUDIO  AILCALL AIL_quick_load_mem            (void   FAR *mem,
+#ifdef IS_MAC
+DXDEC HAUDIO  AILCALL AIL_quick_fss_load            (FSSpec const   FAR *filename);
+#endif
+
+DXDEC HAUDIO  AILCALL AIL_quick_load_mem            (void const   FAR *mem,
                                                     U32    size);
 
 DXDEC HAUDIO  AILCALL AIL_quick_copy                (HAUDIO      audio);
@@ -3461,9 +4050,15 @@ DXDEC void    AILCALL AIL_quick_halt                (HAUDIO      audio);
 
 DXDEC S32     AILCALL AIL_quick_status              (HAUDIO      audio);
 
-DXDEC HAUDIO  AILCALL AIL_quick_load_and_play       (char   FAR *filename,
+DXDEC HAUDIO  AILCALL AIL_quick_load_and_play       (char const   FAR *filename,
                                                     U32         loop_count,
                                                     S32         wait_request);
+
+#ifdef IS_MAC
+DXDEC HAUDIO  AILCALL AIL_quick_fss_load_and_play  (FSSpec const   FAR *filename,
+                                                    U32         loop_count,
+                                                    S32         wait_request);
+#endif
 
 DXDEC void   AILCALL AIL_quick_set_speed (HAUDIO audio, S32 speed);
 
@@ -3502,13 +4097,13 @@ typedef struct _AILMIXINFO {
 
 
 
-DXDEC S32 AILCALL AIL_WAV_info(void FAR* data, AILSOUNDINFO FAR* info);
+DXDEC S32 AILCALL AIL_WAV_info(void const FAR* data, AILSOUNDINFO FAR* info);
 
 DXDEC S32 AILCALL AIL_size_processed_digital_audio(
                                  U32             dest_rate,
                                  U32             dest_format,
                                  S32             num_srcs,
-                                 AILMIXINFO FAR* src);
+                                 AILMIXINFO const FAR* src);
 
 DXDEC S32 AILCALL AIL_process_digital_audio(
                                  void FAR       *dest_buffer,
@@ -3525,53 +4120,53 @@ DXDEC S32 AILCALL AIL_process_digital_audio(
 
 typedef S32 (AILCALLBACK FAR* AILLENGTHYCB)(U32 state,U32 user);
 
-typedef S32 (AILCALLBACK FAR* AILCODECSETPREF)(char FAR* preference,U32 value);
+typedef S32 (AILCALLBACK FAR* AILCODECSETPREF)(char const FAR* preference,U32 value);
 
-DXDEC S32 AILCALL AIL_compress_ASI(AILSOUNDINFO FAR* info, //)
-                                   char FAR* filename_ext,
+DXDEC S32 AILCALL AIL_compress_ASI(AILSOUNDINFO const FAR * info, //)
+                                   char const FAR* filename_ext,
                                    void FAR* FAR* outdata,
                                    U32 FAR* outsize,
                                    AILLENGTHYCB callback);
 
-DXDEC S32 AILCALL AIL_decompress_ASI(void FAR* indata, //)
+DXDEC S32 AILCALL AIL_decompress_ASI(void const FAR* indata, //)
                                      U32 insize,
-                                     char FAR* filename_ext,
+                                     char const FAR* filename_ext,
                                      void FAR* FAR* wav,
                                      U32 FAR* wavsize,
                                      AILLENGTHYCB callback);
 
-DXDEC S32 AILCALL AIL_compress_ADPCM(AILSOUNDINFO FAR * info,
+DXDEC S32 AILCALL AIL_compress_ADPCM(AILSOUNDINFO const FAR * info,
                                      void FAR* FAR* outdata, U32 FAR* outsize);
 
-DXDEC S32 AILCALL AIL_decompress_ADPCM(AILSOUNDINFO FAR * info,
+DXDEC S32 AILCALL AIL_decompress_ADPCM(AILSOUNDINFO const FAR * info,
                                        void FAR* FAR* outdata, U32 FAR* outsize);
 
-DXDEC S32 AILCALL AIL_compress_DLS(void FAR* dls,
-                                   char FAR* compression_extension,
+DXDEC S32 AILCALL AIL_compress_DLS(void const FAR* dls,
+                                   char const FAR* compression_extension,
                                    void FAR* FAR* mls, U32 FAR* mlssize,
                                    AILLENGTHYCB callback);
 
-DXDEC S32 AILCALL AIL_merge_DLS_with_XMI(void FAR* xmi, void FAR* dls,
+DXDEC S32 AILCALL AIL_merge_DLS_with_XMI(void const FAR* xmi, void const FAR* dls,
                                          void FAR* FAR* mss, U32 FAR* msssize);
 
-DXDEC  S32 AILCALL AIL_extract_DLS( void FAR       *source_image, //)
-                                    S32             source_size,
+DXDEC  S32 AILCALL AIL_extract_DLS( void const FAR *source_image, //)
+                                    U32             source_size,
                                     void FAR * FAR *XMI_output_data,
-                                    S32  FAR       *XMI_output_size,
+                                    U32  FAR       *XMI_output_size,
                                     void FAR * FAR *DLS_output_data,
-                                    S32  FAR       *DLS_output_size,
+                                    U32  FAR       *DLS_output_size,
                                     AILLENGTHYCB   callback);
 
 #define AILFILTERDLS_USINGLIST 1
 
-DXDEC S32 AILCALL AIL_filter_DLS_with_XMI(void FAR* xmi, void FAR* dls,
+DXDEC S32 AILCALL AIL_filter_DLS_with_XMI(void const FAR* xmi, void const FAR* dls,
                                          void FAR* FAR* dlsout, U32 FAR* dlssize,
                                          S32  flags, AILLENGTHYCB callback);
 
 #define AILMIDITOXMI_USINGLIST 1
 #define AILMIDITOXMI_TOLERANT  2
 
-DXDEC  S32 AILCALL AIL_MIDI_to_XMI       (void FAR*  MIDI,
+DXDEC  S32 AILCALL AIL_MIDI_to_XMI       (void const FAR*  MIDI,
                                          U32        MIDI_size,
                                          void FAR*  FAR*XMIDI,
                                          U32  FAR*  XMIDI_size,
@@ -3581,7 +4176,7 @@ DXDEC  S32 AILCALL AIL_MIDI_to_XMI       (void FAR*  MIDI,
 #define AILMIDILIST_ROLANDUN    2
 #define AILMIDILIST_ROLANDAB    4
 
-DXDEC  S32          AILCALL AIL_list_MIDI         (void FAR* MIDI,
+DXDEC  S32          AILCALL AIL_list_MIDI         (void const FAR* MIDI,
                                                   U32       MIDI_size,
                                                   char FAR* FAR* lst,
                                                   U32  FAR* lst_size,
@@ -3589,7 +4184,7 @@ DXDEC  S32          AILCALL AIL_list_MIDI         (void FAR* MIDI,
 #define AILDLSLIST_ARTICULATION 1
 #define AILDLSLIST_DUMP_WAVS    2
 
-DXDEC  S32          AILCALL AIL_list_DLS          (void FAR* DLS,
+DXDEC  S32          AILCALL AIL_list_DLS          (void const FAR* DLS,
                                                    char FAR* FAR* lst,
                                                    U32  FAR* lst_size,
                                                    S32       flags,
@@ -3609,14 +4204,16 @@ DXDEC  S32          AILCALL AIL_list_DLS          (void FAR* DLS,
 #define AILFILETYPE_MPEG_L1_AUDIO 11
 #define AILFILETYPE_MPEG_L2_AUDIO 12
 #define AILFILETYPE_MPEG_L3_AUDIO 13
+#define AILFILETYPE_OTHER_ASI_WAV 14
 
-DXDEC S32 AILCALL AIL_file_type(void FAR* data, U32 size);
 
-DXDEC S32 AILCALL AIL_find_DLS       (void FAR*      data, U32 size,
+DXDEC S32 AILCALL AIL_file_type(void const FAR* data, U32 size);
+
+DXDEC S32 AILCALL AIL_find_DLS       (void const FAR*      data, U32 size,
                                       void FAR* FAR* xmi, U32 FAR* xmisize,
                                       void FAR* FAR* dls, U32 FAR* dlssize);
 
-#ifdef IS_WIN32
+#if defined(IS_WIN32) || defined(IS_MAC)
 
 //
 // Auxiliary 2D interface calls
@@ -3654,17 +4251,25 @@ typedef FLTRESULT (AILCALL FAR *FLT_SHUTDOWN)(void);
 typedef C8 FAR *  (AILCALL FAR *FLT_ERROR)(void);
 
 typedef S32       (AILCALL FAR *FLT_SET_PROVIDER_PREFERENCE)(HATTRIB preference,
-                                                             void FAR*   value);
+                                                             void const FAR*   value);
 
-typedef HDRIVERSTATE (AILCALL FAR *FLT_OPEN_DRIVER) (HDIGDRIVER dig, 
+typedef HDRIVERSTATE (AILCALL FAR *FLT_OPEN_DRIVER) (HDIGDRIVER dig,
                                                      S32 FAR   *build_buffer,
                                                      S32        build_buffer_size);
 
 typedef FLTRESULT    (AILCALL FAR *FLT_CLOSE_DRIVER) (HDRIVERSTATE state);
 
-typedef void         (AILCALL FAR *FLT_PREMIX_PROCESS) (HDRIVERSTATE driver);
+typedef void         (AILCALL FAR *FLT_PREMIX_PROCESS) (HDRIVERSTATE driver
+#ifdef IS_MAC
+                                                       ,U32 buffer_size
+#endif
+);
 
-typedef void         (AILCALL FAR *FLT_POSTMIX_PROCESS) (HDRIVERSTATE driver);
+typedef void         (AILCALL FAR *FLT_POSTMIX_PROCESS) (HDRIVERSTATE driver
+#ifdef IS_MAC
+                                                       ,U32 buffer_size
+#endif
+);
 
 //############################################################################
 //##                                                                        ##
@@ -3672,13 +4277,13 @@ typedef void         (AILCALL FAR *FLT_POSTMIX_PROCESS) (HDRIVERSTATE driver);
 //##                                                                        ##
 //############################################################################
 
-typedef HSAMPLESTATE (AILCALL FAR * FLTSMP_OPEN_SAMPLE) (HDRIVERSTATE driver, 
+typedef HSAMPLESTATE (AILCALL FAR * FLTSMP_OPEN_SAMPLE) (HDRIVERSTATE driver,
                                                          HSAMPLE      S);
 
 typedef FLTRESULT    (AILCALL FAR * FLTSMP_CLOSE_SAMPLE) (HSAMPLESTATE state);
 
-typedef S32          (AILCALL FAR * FLTSMP_SAMPLE_PROCESS) (HSAMPLESTATE    state,  
-                                                            void FAR * FAR *orig_src,
+typedef S32          (AILCALL FAR * FLTSMP_SAMPLE_PROCESS) (HSAMPLESTATE    state,
+                                                            void const FAR * FAR *orig_src,
                                                             U32  FAR *      orig_src_fract,
                                                             void FAR *      orig_src_end,
                                                             S32  FAR * FAR *build_dest,
@@ -3697,7 +4302,7 @@ typedef S32          (AILCALL FAR * FLTSMP_SAMPLE_ATTRIBUTE) (HSAMPLESTATE state
 
 typedef S32          (AILCALL FAR * FLTSMP_SET_SAMPLE_PREFERENCE) (HSAMPLESTATE state,
                                                                    HATTRIB      preference,
-                                                                   void FAR*    value);
+                                                                   void const FAR*    value);
 
 //
 // Pipeline filter calls
@@ -3719,13 +4324,13 @@ DXDEC S32        AILCALL AIL_enumerate_filter_attributes
                                                  RIB_INTERFACE_ENTRY FAR *  dest);
 
 DXDEC void       AILCALL AIL_filter_attribute   (HPROVIDER  lib,
-                                                 C8 FAR *   name,
+                                                 C8 const FAR*   name,
                                                  void FAR * val);
 
 DXDEC void       AILCALL AIL_set_filter_preference
                                                 (HPROVIDER  lib,
-                                                 C8 FAR *   name,
-                                                 void FAR * val);
+                                                 C8 const FAR*   name,
+                                                 void const FAR* val);
 
 DXDEC  S32      AILCALL AIL_enumerate_filter_sample_attributes
                                                 (HPROVIDER                 lib,
@@ -3734,33 +4339,33 @@ DXDEC  S32      AILCALL AIL_enumerate_filter_sample_attributes
 
 DXDEC  void     AILCALL AIL_filter_sample_attribute
                                                 (HSAMPLE    S,
-                                                 C8 FAR *   name,
+                                                 C8 const FAR*   name,
                                                  void FAR * val);
 
 DXDEC  void     AILCALL AIL_filter_stream_attribute
                                                 (HSTREAM    S,
-                                                 C8 FAR *   name,
-                                                 void FAR * val);
+                                                 C8 const FAR*   name,
+                                                 void FAR* val);
 
 DXDEC  void     AILCALL AIL_filter_DLS_attribute
                                                 (HDLSDEVICE dls,
-                                                 C8 FAR *   name,
+                                                 C8 const FAR*   name,
                                                  void FAR * val);
 
 DXDEC  void     AILCALL AIL_set_filter_sample_preference
                                                 (HSAMPLE    S,
-                                                 C8 FAR *   name,
-                                                 void FAR * val);
+                                                 C8 const FAR *   name,
+                                                 void const FAR * val);
 
 DXDEC  void     AILCALL AIL_set_filter_stream_preference
                                                 (HSTREAM    S,
-                                                 C8 FAR *   name,
-                                                 void FAR * val);
+                                                 C8 const FAR *   name,
+                                                 void const FAR * val);
 
 DXDEC  void     AILCALL AIL_set_filter_DLS_preference
                                                 (HDLSDEVICE dls,
-                                                 C8 FAR *   name,
-                                                 void FAR * val);
+                                                 C8 const FAR *   name,
+                                                 void const FAR * val);
 
 typedef struct _FLTPROVIDER
 {
@@ -3807,12 +4412,12 @@ DXDEC S32        AILCALL AIL_enumerate_3D_provider_attributes
                                                       RIB_INTERFACE_ENTRY FAR *  dest);
 
 DXDEC void       AILCALL AIL_3D_provider_attribute   (HPROVIDER   lib,
-                                                      C8 FAR *    name,
+                                                      C8 const FAR*    name,
                                                       void FAR *  val);
 
 DXDEC void       AILCALL AIL_set_3D_provider_preference(HPROVIDER   lib,
-                                                        C8 FAR *    name,
-                                                        void FAR *  val);
+                                                        C8 const FAR*    name,
+                                                        void const FAR*  val);
 
 struct H3D
 {
@@ -3903,10 +4508,10 @@ DXDEC void       AILCALL AIL_resume_3D_sample        (H3DSAMPLE S);
 DXDEC void       AILCALL AIL_end_3D_sample           (H3DSAMPLE S);
 
 DXDEC S32        AILCALL AIL_set_3D_sample_file      (H3DSAMPLE S,
-                                                      void FAR *file_image);
+                                                      void const FAR*file_image);
 
 DXDEC S32        AILCALL AIL_set_3D_sample_info      (H3DSAMPLE         S,
-                                                      AILSOUNDINFO FAR *info);
+                                                      AILSOUNDINFO const FAR*info);
 
 DXDEC void       AILCALL AIL_set_3D_sample_volume    (H3DSAMPLE S,
                                                       S32       volume);
@@ -3979,13 +4584,13 @@ DXDEC  S32      AILCALL AIL_enumerate_3D_sample_attributes
                                                       RIB_INTERFACE_ENTRY FAR *  dest);
 
 DXDEC  void     AILCALL AIL_3D_sample_attribute      (H3DSAMPLE   samp,
-                                                      C8 FAR *    name,
+                                                      C8 const FAR*    name,
                                                       void FAR *  val);
 
 
 DXDEC  void     AILCALL AIL_set_3D_sample_preference (H3DSAMPLE   samp,
-                                                      C8 FAR *    name,
-                                                      void FAR *  val);
+                                                      C8 const FAR*    name,
+                                                      void const FAR*  val);
 
 DXDEC void       AILCALL AIL_set_3D_sample_obstruction (H3DSAMPLE S,
                                                         F32       obstruction);
@@ -4077,10 +4682,10 @@ DXDEC void       AILCALL AIL_3D_orientation          (H3DPOBJECT  obj,
                                                       F32 FAR *Y_up,
                                                       F32 FAR *Z_up);
 
-DXDEC void       AILCALL AIL_3D_update_position      (H3DPOBJECT obj,
+DXDEC void       AILCALL AIL_update_3D_position      (H3DPOBJECT obj,
                                                       F32     dt_milliseconds);
 
-DXDEC void       AILCALL AIL_3D_auto_update_position (H3DPOBJECT obj,
+DXDEC void       AILCALL AIL_auto_update_3D_position (H3DPOBJECT obj,
                                                       S32        enable);
 
 DXDEC  void     AILCALL AIL_set_3D_user_data         (H3DPOBJECT obj,
@@ -4190,7 +4795,7 @@ typedef struct _FLTPROVIDER
 #endif
 
 
-#ifdef _PUSHPOP_SUPPORTED
+#if defined(_PUSHPOP_SUPPORTED) || PRAGMA_STRUCT_PACKPUSH
   #pragma pack(pop)
 #else
   #pragma pack()
