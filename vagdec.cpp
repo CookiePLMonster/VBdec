@@ -190,28 +190,17 @@ HASISTREAM AILCALL FAR ASI_stream_open(U32 user, AILASIFETCHCB fetch_CB, U32 tot
 		return 0;
 	}
 
-	memset(STR, 0, sizeof(ASISTREAM));
+	memset(STR, 0, sizeof(*STR));
 
 	STR->user = user;
 	STR->fetch_CB = fetch_CB;
 	STR->size = total_size;
-
-	STR->cursor = 0;
-	STR->loop = false;
 
 	fetch_CB(user, &STR->VAGheader, sizeof(STR->VAGheader), -1);
 	STR->VAGheader.version = _byteswap_ulong(STR->VAGheader.version);
 	STR->VAGheader.sample_rate = _byteswap_ulong(STR->VAGheader.sample_rate);
 	STR->VAGheader.size = _byteswap_ulong(STR->VAGheader.size);
 	STR->num_of_channels = (STR->VAGheader.stereo != 0) ? 2 : 1;
-
-	for (int i = 0; i < STR->num_of_channels; i++)
-	{
-		STR->channels[i].s_1 = 0.0;
-		STR->channels[i].s_2 = 0.0;
-		memset(STR->channels[i].samples, 0, sizeof(STR->channels[i].samples));
-		memset(STR->channels[i].decoded_samples, 0, sizeof(STR->channels[i].decoded_samples));
-	}
 
 	FetchStr(STR, sizeof(STR->VAGheader));
 	return (HASISTREAM)STR;
