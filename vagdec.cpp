@@ -264,6 +264,7 @@ ASIRESULT AILCALL ASI_stream_seek (HASISTREAM stream, S32 stream_offset)
 	}
 	else
 	{
+		STR->offset = stream_offset;
 		STR->cursor = 0;
 		FetchStr(STR, stream_offset);
 	}
