@@ -10,7 +10,7 @@ public:
 	static const size_t VB_BLOCK_SIZE = 512 * 16 * 2;
 
 	VBStream( FILE* file, int sample_rate, int stereo, int size )
-		: stream( file ), fileSize( size )
+		: stream( file ), fileSize( size + sizeof(VAG_HEADER) )
 	{
 		memset( &virtualHeader, 0, sizeof(virtualHeader) );
 		virtualHeader.VAG[0] = 'V';
@@ -43,6 +43,12 @@ public:
 	bool UsesInterleave() const { return blockBuffer != nullptr; }
 
 	FILE* GetStream() const { return stream; }
+
+	static S32 GetBlock(S32 offset)
+	{
+		// VB_BLOCK_SIZE = 2^14
+		return offset >> 14;
+	}
 
 	U32 ReadFile( void FAR* Buffer, U32 Bytes )
 	{
@@ -105,7 +111,7 @@ public:
 		if ( UsesInterleave() )
 		{
 			// Is within the same block?
-			if ( GET_BLOCK(OffsetNoHeader) == GET_BLOCK(CursorNoHeader) )
+			if ( GetBlock(OffsetNoHeader) == GetBlock(CursorNoHeader) )
 			{
 				// Do nothing, just move cursor
 				currentBlockCursor = OffsetNoHeader - CursorNoHeader;
@@ -113,9 +119,9 @@ public:
 			else
 			{
 				// Read new block
-				fseek( stream, GET_BLOCK(OffsetNoHeader) * VB_BLOCK_SIZE, SEEK_SET );
+				fseek( stream, OffsetNoHeader & ~(VB_BLOCK_SIZE-1), SEEK_SET );
 				ReadBlockAndInterleave();
-				currentBlockCursor = OffsetNoHeader % VB_BLOCK_SIZE;
+				currentBlockCursor = OffsetNoHeader & (VB_BLOCK_SIZE-1);
 			}
 		}
 		else
@@ -132,22 +138,24 @@ private:
 		const size_t VB_SAMPLE_SIZE = 0x10;
 
 		U8 buf[VB_BLOCK_SIZE];
-		fread( buf, 1, VB_BLOCK_SIZE, stream );
+		size_t bytesRead = fread( buf, 1, VB_BLOCK_SIZE, stream );
 
 		// Interleave
-		U8* leftChannel = buf;
-		U8* rightChannel = buf+(VB_BLOCK_SIZE/2);
-		U8* output = blockBuffer;
-
-		for ( int i = 0; i < 512; ++i )
+		if ( bytesRead == VB_BLOCK_SIZE )
 		{
-			memcpy( output, leftChannel, VB_SAMPLE_SIZE );
-			memcpy( output+VB_SAMPLE_SIZE, rightChannel, VB_SAMPLE_SIZE );
-			leftChannel += VB_SAMPLE_SIZE;
-			rightChannel += VB_SAMPLE_SIZE;
-			output += 2*VB_SAMPLE_SIZE;
-		}
+			U8* leftChannel = buf;
+			U8* rightChannel = buf+(VB_BLOCK_SIZE/2);
+			U8* output = blockBuffer;
 
+			for ( int i = 0; i < 512; ++i )
+			{
+				memcpy( output, leftChannel, VB_SAMPLE_SIZE );
+				memcpy( output+VB_SAMPLE_SIZE, rightChannel, VB_SAMPLE_SIZE );
+				leftChannel += VB_SAMPLE_SIZE;
+				rightChannel += VB_SAMPLE_SIZE;
+				output += 2*VB_SAMPLE_SIZE;
+			}
+		}
 		currentBlockCursor = 0;
 	}
 

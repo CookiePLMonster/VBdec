@@ -99,5 +99,3 @@ ASIRESULT AILCALL ASI_stream_seek (HASISTREAM stream, S32 stream_offset);
 S32 AILCALL FAR ASI_stream_process(HASISTREAM stream, void FAR *buffer, S32 buffer_size);
 S32 AILCALL FAR ASI_stream_attribute (HASISTREAM stream, HATTRIB attrib);
 S32 AILCALL FAR ASI_stream_set_preference (HASISTREAM stream, HATTRIB preference, void FAR* value);
-
-#define GET_BLOCK(offset) ( offset >> 13 )
