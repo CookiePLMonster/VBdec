@@ -1,6 +1,6 @@
 #include "vagdec.h"
 
-#define BE_TO_LE(i) ( ((i & 0xFF) << 24) | ((i & 0xFF00) << 8) | ((i & 0xFF0000) >> 8) | ((i & 0xFF000000) >> 24)  )
+#include <cstdlib>
 
 static HPROVIDER providerHandle;
 void RegisterVAGInterface()
@@ -200,9 +200,9 @@ HASISTREAM AILCALL FAR ASI_stream_open(U32 user, AILASIFETCHCB fetch_CB, U32 tot
 	STR->loop = false;
 
 	fetch_CB(user, &STR->VAGheader, sizeof(STR->VAGheader), -1);
-	STR->VAGheader.version = BE_TO_LE(STR->VAGheader.version);
-	STR->VAGheader.sample_rate = BE_TO_LE(STR->VAGheader.sample_rate);
-	STR->VAGheader.size = BE_TO_LE(STR->VAGheader.size);
+	STR->VAGheader.version = _byteswap_ulong(STR->VAGheader.version);
+	STR->VAGheader.sample_rate = _byteswap_ulong(STR->VAGheader.sample_rate);
+	STR->VAGheader.size = _byteswap_ulong(STR->VAGheader.size);
 	STR->num_of_channels = (STR->VAGheader.stereo != 0) ? 2 : 1;
 
 	for (int i = 0; i < STR->num_of_channels; i++)

@@ -10,7 +10,7 @@ public:
 	static const size_t VB_BLOCK_SIZE = 512 * 16 * 2;
 
 	VBStream( FILE* file, int sample_rate, int stereo, int size )
-		: stream( file )
+		: stream( file ), fileSize( size )
 	{
 		memset( &virtualHeader, 0, sizeof(virtualHeader) );
 		virtualHeader.VAG[0] = 'V';
@@ -20,7 +20,7 @@ public:
 
 		virtualHeader.sample_rate = _byteswap_ulong(sample_rate);
 		virtualHeader.stereo = _byteswap_ulong(stereo);
-		virtualHeader.size = size;
+		virtualHeader.size = _byteswap_ulong(size);
 
 		blockBuffer = stereo != 0 ? (uint8_t*)AIL_mem_alloc_lock( VB_BLOCK_SIZE ) : nullptr;
 	}
@@ -89,7 +89,7 @@ public:
 	S32 SeekFile( S32 Offset, U32 Type )
 	{
 		if ( Type == AIL_FILE_SEEK_CURRENT ) Offset += virtualCursor;
-		else if ( Type == AIL_FILE_SEEK_END ) Offset = virtualHeader.size - Offset;
+		else if ( Type == AIL_FILE_SEEK_END ) Offset = fileSize - Offset;
 
 		S32 OffsetNoHeader = Offset - sizeof(VAG_HEADER);
 		S32 CursorNoHeader = virtualCursor - sizeof(VAG_HEADER);
@@ -156,6 +156,7 @@ private:
 	VAG_HEADER virtualHeader;
 	U8* blockBuffer;
 	S32 currentBlockCursor = 0, virtualCursor = 0;
+	S32 fileSize;
 };
 
 static std::vector<FILE*> adfStreams;
