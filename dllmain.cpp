@@ -1,4 +1,5 @@
-#include "vbdec.h"
+#include "vagdec.h"
+#include "vbcalls.h"
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -12,10 +13,11 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 	switch ( reason )
 	{
 	case DLL_PROCESS_ATTACH:
-		RegisterVBInterface();
+		RegisterVAGInterface();
+		AttachVBCallbacks();
 		break;
 	case DLL_PROCESS_DETACH:
-		UnregisterVBInterface();
+		UnRegisterVAGInterface();
 		break;
 	}
 	return TRUE;

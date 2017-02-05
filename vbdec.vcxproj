@@ -54,7 +54,7 @@
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>mss/mss32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>mss/mss32.lib;mss/mss32_2.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -75,17 +75,19 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>mss/mss32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>mss/mss32.lib;mss/mss32_2.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="vbdec.cpp" />
+    <ClCompile Include="vagdec.cpp" />
+    <ClCompile Include="vbcalls.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="mss\mss.h" />
-    <ClInclude Include="vbdec.h" />
+    <ClInclude Include="vagdec.h" />
+    <ClInclude Include="vbcalls.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -18,19 +18,25 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="vbdec.cpp">
+    <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dllmain.cpp">
+    <ClCompile Include="vagdec.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vbcalls.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="vbdec.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="mss\mss.h">
       <Filter>Header Files\mss</Filter>
+    </ClInclude>
+    <ClInclude Include="vagdec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vbcalls.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

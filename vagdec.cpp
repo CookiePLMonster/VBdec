@@ -1,10 +1,9 @@
-#include "vbdec.h"
+#include "vagdec.h"
 
-#define GET_BLOCK(offset) ( offset >> 13 )
 #define BE_TO_LE(i) ( ((i & 0xFF) << 24) | ((i & 0xFF00) << 8) | ((i & 0xFF0000) >> 8) | ((i & 0xFF000000) >> 24)  )
 
 static HPROVIDER providerHandle;
-void RegisterVBInterface()
+void RegisterVAGInterface()
 {
 	// ASI codec
 	const RIB_INTERFACE_ENTRY codecEntries[] = {
@@ -55,7 +54,7 @@ void RegisterVBInterface()
 	RIB_register( providerHandle, "ASI stream", streamEntries );
 }
 
-void UnregisterVBInterface()
+void UnRegisterVAGInterface()
 {
 	RIB_unregister_all(providerHandle);
 }
