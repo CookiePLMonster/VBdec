@@ -248,6 +248,7 @@ S32 AILCALL FAR ASI_stream_process(HASISTREAM stream, void FAR *buffer, S32 buff
 				break;
 		}
 	}
+	STR->offset += bytes_decoded;
 	return bytes_decoded;
 }
 
