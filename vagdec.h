@@ -71,7 +71,7 @@ struct ASISTREAM
 	U32 blocks;
 	U32 cur_block;
 
-	U32 num_of_channels;
+	S32 num_of_channels;
 
 	bool loop;
 

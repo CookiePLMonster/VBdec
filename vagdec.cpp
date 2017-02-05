@@ -254,7 +254,7 @@ S32 AILCALL FAR ASI_stream_process(HASISTREAM stream, void FAR *buffer, S32 buff
 ASIRESULT AILCALL ASI_stream_seek (HASISTREAM stream, S32 stream_offset)
 {
 	ASISTREAM *STR = (ASISTREAM*)stream;
-	if (stream_offset > STR->size) return ASI_INVALID_PARAM;
+	if (stream_offset > (S32)(STR->VAGheader.size + sizeof(STR->VAGheader))) return ASI_INVALID_PARAM;
 
 	if (stream_offset == -2) // loop
 	{
