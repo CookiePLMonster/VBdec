@@ -22,7 +22,7 @@ public:
 		virtualHeader.stereo = _byteswap_ulong(stereo);
 		virtualHeader.size = _byteswap_ulong(size);
 
-		blockBuffer = stereo != 0 ? (uint8_t*)AIL_mem_alloc_lock( VB_BLOCK_SIZE ) : nullptr;
+		blockBuffer = stereo != 0 ? (U8*)AIL_mem_alloc_lock( VB_BLOCK_SIZE ) : nullptr;
 	}
 
 	VBStream( const VBStream& ) = delete;
@@ -162,6 +162,30 @@ private:
 static std::vector<FILE*> adfStreams;
 static std::vector<VBStream> vbStreams;
 
+static void XORADFStream( void FAR* Buffer, size_t size )
+{
+	U8* buf = (U8*)Buffer;
+
+	while ( size != 0 && ((U32)buf & 3) != 0 )
+	{
+		*buf ++ ^= 0x22;
+		--size;
+	}
+
+	while ( size >= 4 )
+	{
+		*(U32*)buf ^= 0x22222222;
+		buf += 4;
+		size -= 4;
+	}
+
+	while ( size != 0 )
+	{
+		*buf ++ ^= 0x22;
+		--size;
+	}
+}
+
 static U32 AILCALLBACK FAR OpenFileCB(MSS_FILE const FAR* Filename, U32 FAR* FileHandle)
 {
 	FILE* hFile = fopen( Filename, "rb" );
@@ -253,11 +277,7 @@ static U32 AILCALLBACK FAR ReadFileCB(U32 FileHandle, void FAR* Buffer, U32 Byte
 		if ( it != adfStreams.end() )
 		{
 			size_t bytesRead = fread( Buffer, 1, Bytes, hFile );
-			unsigned char* buf = (unsigned char*)Buffer;
-			for ( size_t i = 0; i < bytesRead; ++i )
-			{
-				*buf++ ^= 0x22;
-			}
+			XORADFStream( Buffer, bytesRead );
 			return bytesRead;
 		}
 	}
