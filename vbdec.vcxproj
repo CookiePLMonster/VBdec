@@ -92,8 +92,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="mss\mss.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="vagdec.h" />
     <ClInclude Include="vbcalls.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="vbdec.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
