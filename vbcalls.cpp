@@ -221,15 +221,22 @@ static U32 AILCALLBACK FAR OpenFileCB(MSS_FILE const FAR* Filename, U32 FAR* Fil
 		)
 	{
 		MSS_FILE FAR* name = const_cast<MSS_FILE FAR*>(Filename);
+		name[length-2] = 'i';
+		name[length-1] = 'n';
+		name[length] = 'i';
+		name[length+1] = '\0';
+
+		int samplerate = GetPrivateProfileInt( "VB", "sample_rate", 32000, name );
+		int stereo = GetPrivateProfileInt( "VB", "stereo", 1, name ) != 0 ? 1 : 0;
+
 		name[length-2] = 'v';
 		name[length-1] = 'a';
 		name[length] = 'g';
-		name[length+1] = '\0';
 
 		fseek( hFile, 0, SEEK_END );
 		int size = ftell( hFile );
 		fseek( hFile, 0, SEEK_SET );
-		vbStreams.emplace_back( hFile, 32000, 1, size );
+		vbStreams.emplace_back( hFile, samplerate, stereo, size );
 	}
 
 	return (U32)hFile;
