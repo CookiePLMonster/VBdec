@@ -73,20 +73,27 @@ public:
 			return bytesRead;
 		}
 
-		if ( currentBlockCursor + Bytes >= VB_BLOCK_SIZE )
+		if ( !UsesInterleave() )
 		{
-			size_t firstRead = VB_BLOCK_SIZE - currentBlockCursor;
-
-			memcpy( Buffer, blockBuffer+currentBlockCursor, firstRead );
-			ReadBlockAndInterleave();
-			memcpy( (U8*)Buffer+firstRead, blockBuffer, Bytes-firstRead );
-
-			currentBlockCursor += Bytes-firstRead;
+			Bytes = fread( Buffer, 1, Bytes, stream );
 		}
 		else
 		{
-			memcpy( Buffer, blockBuffer+currentBlockCursor, Bytes );
-			currentBlockCursor += Bytes;
+			if ( currentBlockCursor + Bytes >= VB_BLOCK_SIZE )
+			{
+				size_t firstRead = VB_BLOCK_SIZE - currentBlockCursor;
+
+				memcpy( Buffer, blockBuffer+currentBlockCursor, firstRead );
+				ReadBlockAndInterleave();
+				memcpy( (U8*)Buffer+firstRead, blockBuffer, Bytes-firstRead );
+
+				currentBlockCursor += Bytes-firstRead;
+			}
+			else
+			{
+				memcpy( Buffer, blockBuffer+currentBlockCursor, Bytes );
+				currentBlockCursor += Bytes;
+			}
 		}
 		virtualCursor += Bytes;
 		return Bytes;
