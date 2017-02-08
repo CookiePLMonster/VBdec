@@ -111,6 +111,16 @@ C8 FAR* AILCALL FAR ASI_error(void)
 
 // ASI stream
 
+static short quantize(double sample)
+{
+	int a = int(sample + 0.5);
+
+	if (a < -32768) return -32768; 
+	if (a > 32767)	return 32767;
+
+	return short(a);
+}
+
 bool FetchStr( ASISTREAM *STR, int offset = -1 )
 {
 	U8 in_buf[0x20];
@@ -129,14 +139,11 @@ bool FetchStr( ASISTREAM *STR, int offset = -1 )
 		bytes_read = STR->fetch_CB(STR->user, in_buf, STR->num_of_channels * 0x10, sizeof(STR->VAGheader));
 		if (bytes_read < STR->num_of_channels * 0x10) return false;
 	}
-		
-	for (int i = 0; i < STR->num_of_channels; i++)
+	
+	if (offset != -1)
 	{
-		if (offset != -1)
-		{
-			STR->channels[i].s_1 = 0.0;
-			STR->channels[i].s_2 = 0.0;
-		}
+		STR->channels[0].s_1 = STR->channels[0].s_2 = 0.0;
+		STR->channels[1].s_1 = STR->channels[1].s_2 = 0.0;
 	}
 
 	static const double f[5][2] = { { 0.0, 0.0 },
@@ -157,13 +164,9 @@ bool FetchStr( ASISTREAM *STR, int offset = -1 )
 		for ( int i = 0; i < 28; i += 2 )
 		{
 			int d = *(bufs[c]++);
-			int s = ( d & 0xf ) << 12;
-			if ( s & 0x8000 )
-				s |= 0xffff0000;
+			short s = short(( d & 0xf ) << 12);
 			STR->channels[c].samples[i] = (double) ( s >> shift_factor  );
-			s = ( d & 0xf0 ) << 8;
-			if ( s & 0x8000 )
-				s |= 0xffff0000;
+			s = short(( d & 0xf0 ) << 8);
 			STR->channels[c].samples[i+1] = (double) ( s >> shift_factor  );
 
 		}
@@ -172,9 +175,7 @@ bool FetchStr( ASISTREAM *STR, int offset = -1 )
 			STR->channels[c].samples[i] = STR->channels[c].samples[i] + STR->channels[c].s_1 * f[predict_nr][0] + STR->channels[c].s_2 * f[predict_nr][1];
 			STR->channels[c].s_2 = STR->channels[c].s_1;
 			STR->channels[c].s_1 = STR->channels[c].samples[i];
-			int d = (int) ( STR->channels[c].samples[i] + 0.5 );
-			if ( d & 0x8000 ) d |= 0xffff0000;
-			*(dest[c]++) = (d & 0xffff);
+			*(dest[c]++) = quantize( STR->channels[c].samples[i] );
 		}
 		if ( flags == 1 ) break; 
 	}
