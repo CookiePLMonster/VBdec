@@ -7,7 +7,8 @@
 class VBStream
 {
 public:
-	static const size_t VB_BLOCK_SIZE = 512 * 16 * 2;
+	static const size_t VB_SAMPLE_SIZE = 0x10;
+	static const size_t VB_BLOCK_SIZE = 512 * VB_SAMPLE_SIZE * 2;
 
 	VBStream( FILE* file, int sample_rate, int stereo, int size )
 		: stream( file ), fileSize( size + sizeof(VAG_HEADER) )
@@ -104,6 +105,11 @@ public:
 		if ( Type == AIL_FILE_SEEK_CURRENT ) Offset += virtualCursor;
 		else if ( Type == AIL_FILE_SEEK_END ) Offset = fileSize - Offset;
 
+		if ( UsesInterleave() )
+			Offset &= ~((VB_SAMPLE_SIZE*2)-1);
+		else
+			Offset &= ~(VB_SAMPLE_SIZE-1);
+
 		S32 OffsetNoHeader = Offset - sizeof(VAG_HEADER);
 		S32 CursorNoHeader = virtualCursor - sizeof(VAG_HEADER);
 
@@ -142,8 +148,6 @@ public:
 private:
 	void ReadBlockAndInterleave( )
 	{
-		const size_t VB_SAMPLE_SIZE = 0x10;
-
 		U8 buf[VB_BLOCK_SIZE];
 		size_t bytesRead = fread( buf, 1, VB_BLOCK_SIZE, stream );
 
