@@ -121,6 +121,8 @@ static short quantize(double sample)
 	return short(a);
 }
 
+#include <cassert>
+
 bool FetchStr( ASISTREAM *STR, int offset = -1 )
 {
 	U8 in_buf[0x20];
@@ -159,6 +161,7 @@ bool FetchStr( ASISTREAM *STR, int offset = -1 )
 		int predict_nr = *(bufs[c]++);
 		int shift_factor = predict_nr & 0xf;
 		predict_nr >>= 4;
+		assert( predict_nr < 5 );
 		int flags = *(bufs[c]++);
 		if ( flags == 7 ) return false;
 		for ( int i = 0; i < 28; i += 2 )

@@ -4,6 +4,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <cassert>
+
 class VBStream
 {
 public:
@@ -97,6 +99,7 @@ public:
 			}
 		}
 		virtualCursor += Bytes;
+		assert( (virtualCursor & ((VB_SAMPLE_SIZE*2)-1)) == 0 );
 		return Bytes;
 	}
 
@@ -136,6 +139,7 @@ public:
 				ReadBlockAndInterleave();
 				currentBlockCursor = OffsetNoHeader & (VB_BLOCK_SIZE-1);
 			}
+			assert( (currentBlockCursor & ((VB_SAMPLE_SIZE*2)-1)) == 0 );
 		}
 		else
 		{
