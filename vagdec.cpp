@@ -266,7 +266,7 @@ S32 AILCALL FAR ASI_stream_attribute (HASISTREAM stream, HATTRIB attrib)
 	ASISTREAM *STR = (ASISTREAM*)stream;
 	switch (attrib)
 	{
-	case INPUT_BIT_RATE: return 0x10 * 1000 * STR->num_of_channels * 8; // align 0x10 bytes * channels
+	case INPUT_BIT_RATE: return STR->VAGheader.sample_rate * 4 * STR->num_of_channels;
 	case INPUT_SAMPLE_RATE: return STR->VAGheader.sample_rate;
 	case INPUT_BITS: return 4;
 	case INPUT_CHANNELS: return STR->num_of_channels;
