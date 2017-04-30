@@ -1,5 +1,4 @@
 #include "vagdec.h"
-#pragma warning(disable : 4996)  
 
 #include <vector>
 #include <algorithm>
@@ -211,10 +210,11 @@ static void XORADFStream( void FAR* Buffer, size_t size )
 
 static U32 AILCALLBACK FAR OpenFileCB(MSS_FILE const FAR* Filename, U32 FAR* FileHandle)
 {
-	FILE* hFile = fopen( Filename, "rb" );
+	FILE* hFile = nullptr;
+	errno_t err = fopen_s( &hFile, Filename, "rb" );
 	*FileHandle = (U32)hFile;
 
-	if ( hFile == nullptr ) return 0;
+	if ( err != 0 ) return 0;
 
 	size_t length = strlen(Filename);
 	if ( Filename[length-4] == '.' &&
