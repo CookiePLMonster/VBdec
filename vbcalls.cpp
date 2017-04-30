@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include <cassert>
+#include <io.h>
 
 class VBStream
 {
@@ -248,9 +249,7 @@ static U32 AILCALLBACK FAR OpenFileCB(MSS_FILE const FAR* Filename, U32 FAR* Fil
 		name[length-1] = 'a';
 		name[length] = 'g';
 
-		fseek( hFile, 0, SEEK_END );
-		int size = ftell( hFile );
-		fseek( hFile, 0, SEEK_SET );
+		int size = _filelength( _fileno(hFile) );
 		vbStreams.emplace_back( hFile, samplerate, stereo, size );
 	}
 
